@@ -4,6 +4,7 @@ import talib as tl
 import pandas as pd
 import logging
 from datetime import datetime, timedelta
+import settings
 
 
 # 使用示例：result = backtrace_ma250.check(code_name, data, end_date=end_date)
@@ -14,6 +15,8 @@ from datetime import datetime, timedelta
 
 # 回踩年线策略
 def check(code_name, data, end_date=None, threshold=60):
+    if code_name[0] not in settings.top_list:
+        return False        
     if len(data) < 250:
         logging.debug("{0}:样本小于250天...\n".format(code_name))
         return

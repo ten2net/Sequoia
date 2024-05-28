@@ -4,10 +4,13 @@ import talib as tl
 import pandas as pd
 import logging
 from strategy import enter
+import settings
 
 
 # 平台突破策略
 def check(code_name, data, end_date=None, threshold=60):
+    if code_name[0] not in settings.top_list:
+        return False        
     origin_data = data
     if len(data) < threshold:
         logging.debug("{0}:样本小于{1}天...\n".format(code_name, threshold))

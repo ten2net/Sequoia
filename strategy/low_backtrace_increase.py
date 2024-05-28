@@ -1,9 +1,12 @@
 # -*- encoding: UTF-8 -*-
 import logging
+import settings
 
 
 # 低回撤稳步上涨策略
 def check(code_name, data, end_date=None, threshold=60):
+    if code_name[0] not in settings.top_list:
+        return False 
     if end_date is not None:
         mask = (data['日期'] <= end_date)
         data = data.loc[mask]

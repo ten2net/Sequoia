@@ -3,10 +3,13 @@
 import talib as tl
 import pandas as pd
 import logging
+import settings
 
 
 # 持续上涨（MA30向上）
 def check(code_name, data, end_date=None, threshold=30):
+    if code_name[0] not in settings.top_list:
+        return False        
     if len(data) < threshold:
         logging.debug("{0}:样本小于{1}天...\n".format(code_name, threshold))
         return
