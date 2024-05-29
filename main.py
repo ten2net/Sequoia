@@ -8,20 +8,19 @@ import schedule
 import time
 import datetime
 from pathlib import Path
+import pywencai
 from tqdm import tqdm
+from termcolor import colored
 
-logging.basicConfig(format='%(asctime)s %(message)s', filename='sequoia.log')
+logging.basicConfig(format='## %(asctime)s %(message)s',datefmt='%Y-%m-%d %H:%M', filename='选票结果.md')
 logging.getLogger().setLevel(logging.INFO)
+# industry_queries 用来动态给stock_queries添加股票池查询
+industry_queries=['今日涨跌幅大于0.5，且涨跌幅排名前8的行业', '技术面评分排名前3名的行业板块']
+# 固定的股票池查询
 stock_queries = [
-    '高位跳空低开',
-    'boll线上穿中轨，且换手率<4%',
-    '高位低开，且换手率<4%',
-    '高位阳包阴并创新高',
-    '近5日两融净流入大于1亿，K线形态为反包',
-    '近5日两融净流入大于1亿，K线形态为射击之星',
-    '今日10点02分之前，成交额大于2亿且15分钟线突破前高的上升通道',
-    '总市值大于100亿且成交金额最近连续两个交易日排名前100名',
-    '现金储备排名前50，股价突破60日均线'
+    '高位阳包阴并创新高的非ST、非科创板的未涨停股票',
+    '换手率排名前100，技术形态为价升量涨的非ST、非科创板的未涨停股票',
+    '流通市值大于100亿且成交金额最近连续两个交易日排名前100名的未涨停股票'
 ]  
 
 pbar = None
@@ -41,15 +40,26 @@ def is_trading_time():
         if work_start_2 <= now.time() <= work_end_2:
             return True
     return False
+def gen_dynamic_query():
+    dynamic_queries = []
+    queries=['今日涨跌幅大于0.5，且涨跌幅排名前8的行业', '技术面评分排名前3名的行业板块']
+    for query in queries:
+        df = pywencai.get(query=query,query_type="zhishu")
+        results =df['指数简称'].to_list()
+        dynamic_queries += [f'技术面评分排名前10的非ST、非科创板{industry_sector}行业未涨停股票' for industry_sector in results ]
+    return dynamic_queries
+    
 def job():
     if utils.is_weekday():
-        for stock_query in stock_queries:
+        queries = gen_dynamic_query() + stock_queries
+        for stock_query in queries:
             settings.init(stock_query)           
             work_flow.prepare()            
     pbar.reset()          
-            
 
 if __name__ == '__main__':
+    tips = f'{"=" * 50}\n提示: 请查看文件\n{Path.cwd() / "选票结果.md"}\n{"=" * 50}'
+    print(colored(tips,'magenta'))  
     settings.init()  
     if settings.config['cron'] and is_trading_time():
         # EXEC_TIME = "15:15"
@@ -64,6 +74,7 @@ if __name__ == '__main__':
             time.sleep(1)
             pbar.update(1)  # 手动更新进度条
     else:
-        for stock_query in stock_queries:
+        queries = gen_dynamic_query() + stock_queries
+        for stock_query in queries:
             settings.init(stock_query)            
             work_flow.prepare()

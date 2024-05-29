@@ -22,7 +22,7 @@ import json
 
 def prepare():
     logging.info(
-        f"************************ process start for {settings.query} ***************************************")
+        f"股票池： {settings.query}")
     # all_data = ak.stock_zh_a_spot_em()
     # subset = all_data[['代码', '名称']]
     # stocks = [tuple(x) for x in subset.values]
@@ -34,14 +34,14 @@ def prepare():
         # '停机坪': parking_apron.check,
         # '回踩年线': backtrace_ma250.check,
         # '突破平台': breakthrough_platform.check,
-        # '无大幅回撤': low_backtrace_increase.check,
+        '无大幅回撤': low_backtrace_increase.check,
         '海龟交易法则': turtle_trade.check_enter,
         # '高而窄的旗形': high_tight_flag.check,
         # '放量跌停': climax_limitdown.check,
     }
 
-    if datetime.datetime.now().weekday() == 0:
-        strategies['均线多头'] = keep_increasing.check
+    # if datetime.datetime.now().weekday() == 0:
+    #     strategies['均线多头'] = keep_increasing.check
 
     process(stocks, strategies)
 
@@ -52,7 +52,7 @@ def prepare():
 def process(stocks, strategies):
     stocks_data = data_fetcher.run(stocks)
 
-    pbar = tqdm(range(len(strategies.items())), desc='Processing',
+    pbar = tqdm(range(len(strategies.items())), desc='策略正在二次筛选中',
                 bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed} < {remaining}, {rate_fmt}]', colour='blue')
     for strategy, strategy_func in strategies.items():
         check(stocks_data, strategy, strategy_func)
@@ -82,7 +82,7 @@ def check(stocks_data, strategy, strategy_func):
         sorted_results = [
             (tup[0], tup[1], tup[2], tup[3], f"{tup[4] / 10000:.2f}") for tup in sorted_results]
 
-        push.strategy('--------------"{0}"--------------\n{1}\n'.format(
+        push.strategy('**{0}**\n{1}\n'.format(
             strategy, '\n'.join([str(item) for item in sorted_results])))
         # push.strategy('**************"{0}"**************\n{1}\n**************"{0}"**************\n'.format(strategy, '\n'.join([str(item) for item in list(results_with_zdf.keys())])))
 

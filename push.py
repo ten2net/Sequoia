@@ -10,7 +10,7 @@ def push(msg):
         response = WxPusher.send_message(msg, uids=[settings.config['push']['wxpusher_uid']],
                                          token=settings.config['push']['wxpusher_token'])
         print(response)
-    logging.info(msg)
+    logging.info(msg, extra={'h': 3})
 
 
 def statistics(msg=None):

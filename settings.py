@@ -3,6 +3,7 @@ import yaml
 import os
 import akshare as ak
 import pywencai
+from termcolor import colored
 
 def init(q=""):
 
@@ -22,9 +23,11 @@ def init(q=""):
     # top_list = df['代码'].tolist()
     # lhb_df = df[['代码','名称']]
     query=q
+    print(colored(q,'yellow'))
     df = pywencai.get(query=query)
-    # df = pywencai.get(query='跳空低开')
+
     df = df[['股票代码','股票简称']]
+    # print(df)
     df['股票代码'] = df['股票代码'].str.slice(start=0, stop=6)
     df = df[~df['股票代码'].str.startswith('68')]  # 排除以 '68' 开头的代码
     df = df[~df['股票代码'].str.startswith('4')]  # 排除以 '4' 开头的代码
