@@ -10,6 +10,7 @@ from strategy import parking_apron
 from strategy import low_backtrace_increase
 from strategy import keep_increasing
 from strategy import high_tight_flag
+import pandas as pd
 import akshare as ak
 import push
 import logging
@@ -18,6 +19,7 @@ import datetime
 from tqdm import tqdm
 import settings
 import json
+import random
 
 
 def prepare():
@@ -29,12 +31,12 @@ def prepare():
     # statistics(all_data, stocks)
     stocks = [tuple(x) for x in settings.lhb_df.values]
     strategies = {
-        '放量上涨': enter.check_volume,
+        # '放量上涨': enter.check_volume,
         # '均线多头': keep_increasing.check,
         # '停机坪': parking_apron.check,
-        # '回踩年线': backtrace_ma250.check,
+        '回踩年线': backtrace_ma250.check,
         # '突破平台': breakthrough_platform.check,
-        '无大幅回撤': low_backtrace_increase.check,
+        # '无大幅回撤': low_backtrace_increase.check,
         '海龟交易法则': turtle_trade.check_enter,
         # '高而窄的旗形': high_tight_flag.check,
         # '放量跌停': climax_limitdown.check,
@@ -81,9 +83,16 @@ def check(stocks_data, strategy, strategy_func):
                                 key=lambda x: x[-1])[::-1]
         sorted_results = [
             (tup[0], tup[1], tup[2], tup[3], f"{tup[4] / 10000:.2f}") for tup in sorted_results]
-
-        push.strategy('**{0}**\n{1}\n'.format(
-            strategy, '\n'.join([str(item) for item in sorted_results])))
+        for item in sorted_results:
+   
+            new_row ={
+                '股票代码': item[0],      
+                '当前行情': str(item),    
+                '预测收益率': 0.5 * float(item[3][:-1])  # 先默认为当前涨跌幅的一半
+            }
+            settings.leaderboard.append(new_row)
+        # push.strategy('**{0}**\n{1}\n'.format(
+        #     strategy, '\n'.join([f'[{str(item)}](https://www.iwencai.com/unifiedwap/result?w={item[0]}&querytype=stock)' for item in sorted_results])))
         # push.strategy('**************"{0}"**************\n{1}\n**************"{0}"**************\n'.format(strategy, '\n'.join([str(item) for item in list(results_with_zdf.keys())])))
 
 

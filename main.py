@@ -11,6 +11,9 @@ from pathlib import Path
 import pywencai
 from tqdm import tqdm
 from termcolor import colored
+import pandas as pd
+import ast
+import requests 
 
 logging.basicConfig(format='## %(asctime)s %(message)s',datefmt='%Y-%m-%d %H:%M', filename='选票结果.md')
 logging.getLogger().setLevel(logging.INFO)
@@ -18,12 +21,39 @@ logging.getLogger().setLevel(logging.INFO)
 industry_queries=['今日涨跌幅大于0.5，且涨跌幅排名前8的行业', '技术面评分排名前3名的行业板块']
 # 固定的股票池查询
 stock_queries = [
-    '高位阳包阴并创新高的非ST、非科创板的未涨停股票',
-    '换手率排名前100，技术形态为价升量涨的非ST、非科创板的未涨停股票',
-    '流通市值大于100亿且成交金额最近连续两个交易日排名前100名的未涨停股票'
+    # '高位阳包阴并创新高的非ST、非科创板的未涨停股票'
 ]  
 
+class WeCom:
+    def __init__(self, webhook_url):
+        self.webhook_url = webhook_url
+
+    def send_message(self, message):
+        now = datetime.datetime.now()
+        formatted_now = now.strftime("%m月%d日 %H:%M")        
+        """发送markdown消息到企业微信群"""
+        data = {
+            "msgtype": "markdown",
+            "markdown": {
+                "content": f'## <font color="warning">甘州图灵封神榜{formatted_now}</font> \n\n {message}'
+            }
+        }
+        response = requests.post(self.webhook_url, json=data)
+        return response.json()
+    
+def push(msg):
+    if settings.config['push']['enable']:
+        keys=[
+            '88aa58e5-818a-471d-8786-84ee85984467',
+            'e312ad13-1f18-430b-9c66-304922694dc3'
+        ]
+        for key in keys:
+            webhook_url = f"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={key}"
+            wecom = WeCom(webhook_url)
+            response = wecom.send_message(msg)
+
 pbar = None
+leaderboard_today = []
 
 def is_trading_time():
     now = datetime.datetime.now()
@@ -42,29 +72,76 @@ def is_trading_time():
     return False
 def gen_dynamic_query():
     dynamic_queries = []
-    queries=['今日涨跌幅大于0.5，且涨跌幅排名前8的行业', '技术面评分排名前3名的行业板块']
+    queries=['今日涨跌幅大于0.5，且涨跌幅排名前3的行业', '今日涨跌幅大于0.5，且资金净流入排名前3的行业']
     for query in queries:
         df = pywencai.get(query=query,query_type="zhishu")
-        results =df['指数简称'].to_list()
-        dynamic_queries += [f'技术面评分排名前10的非ST、非科创板{industry_sector}行业未涨停股票' for industry_sector in results ]
+        if df is not None:
+            results =df['指数简称'].to_list()
+            # dynamic_queries += [f'技术面评分排名前10的非ST、非科创板{industry_sector}行业未涨停股票' for industry_sector in results ]
+            dynamic_queries += [f'流通市值大于100亿且成交金额排名前100名的{industry_sector}行业未涨停股票' for industry_sector in results ]
+            dynamic_queries += [f'换手率排名在20到100之间，技术形态为价升量涨的非ST、非科创板的{industry_sector}行业未涨停股票' for industry_sector in results ]
     return dynamic_queries
     
-def job():
-    if utils.is_weekday():
+def job(leaderboard_today):
+    if utils.is_weekday() and is_trading_time():
+        leaderboard = []
         queries = gen_dynamic_query() + stock_queries
         for stock_query in queries:
             settings.init(stock_query)           
-            work_flow.prepare()            
+            work_flow.prepare() 
+            leaderboard += settings.leaderboard 
+        leaderboard_today += leaderboard
+        leaderboard_markdown = rebuild_leaderboard_markdown(leaderboard)  # 剔除重复股票，并排序
+        if len(leaderboard_markdown) > 0:
+            push(leaderboard_markdown) 
     pbar.reset()          
+def rebuild_leaderboard_markdown(leaderboard):
+    if len(leaderboard) > 0:
+        print("leaderboard:",leaderboard)
+        for item in leaderboard:
+            current = ast.literal_eval(item['当前行情'])
+            current_change = float(current[3][:-1])
+            first_listed_change = current_change
+            if len(leaderboard_today)>0:
+                first_match = next((row for row in leaderboard_today if row['股票代码'] == item['股票代码']), None)
+                print("first_match",first_match)
+                if first_match:
+                    first_listed_change = float(ast.literal_eval(first_match['当前行情'])[3][:-1]) 
+                    print("first_listed_change",first_listed_change)
+                item['初榜涨幅差'] = (current_change - first_listed_change) 
+                # 求与上一榜的涨幅差
+                second_to_last_change = current_change
+                matches = [row for row in leaderboard_today if row['股票代码'] == item['股票代码']]
+                if len(matches) >= 2:
+                    second_to_last_match = matches[-2]
+                    second_to_last_change = float(ast.literal_eval(second_to_last_match['当前行情'])[3][:-1]) 
+                item['榜间涨幅差'] = (current_change - second_to_last_change) 
+    
+        df_leaderboard = pd.DataFrame(leaderboard)
+        print("leaderboard_today:",leaderboard_today)
+
+        df_leaderboard = df_leaderboard.groupby('股票代码').apply(lambda x: x[x.groupby('股票代码').cumcount() == (x.groupby('股票代码').cumcount().max())])
+        df_leaderboard.reset_index(drop=True, inplace=True) 
+        df_leaderboard['当前行情'] = df_leaderboard['当前行情'].apply(lambda item: f"""[{item[1:-1].replace("'", "").replace(",", " ")}](https://www.iwencai.com/unifiedwap/result?w={ast.literal_eval(item)[0]}&querytype=stock)""")
+        df_leaderboard=df_leaderboard[['当前行情', '初榜涨幅差','榜间涨幅差']]
+        df_sorted = df_leaderboard.sort_values(by='榜间涨幅差', ascending=False)
+        df_sorted['Combined'] = df_sorted[['当前行情', '初榜涨幅差','榜间涨幅差']].apply(lambda x: x[0] + ' <font color="warning">' +  f"{x[1]:.2f}" +'</font>'+ ' <font color="comment">' +  f"{x[2]:.2f}" +'</font>'   , axis=1)
+        df_sorted['Combined'] = df_sorted['Combined'].astype(str)
+        leaderboard_list = df_sorted['Combined'].tolist()         
+        return "\n".join(leaderboard_list)  
+    else:
+        return ''  
+    
 
 if __name__ == '__main__':
     tips = f'{"=" * 50}\n提示: 请查看文件\n{Path.cwd() / "选票结果.md"}\n{"=" * 50}'
-    print(colored(tips,'magenta'))  
+    print(colored(tips,'magenta')) 
+    leaderboard = []
     settings.init()  
-    if settings.config['cron'] and is_trading_time():
+    if settings.config['cron']:
         # EXEC_TIME = "15:15"
         # schedule.every().day.at(EXEC_TIME).do(job)
-        schedule.every(settings.config['cron_period']).minutes.do(job) 
+        schedule.every(settings.config['cron_period']).minutes.do(lambda:job(leaderboard_today)) 
         
         pbar = tqdm(range(settings.config['cron_period'] * 60), desc='正在等待任务执行...', 
                     bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed} < {remaining}, {rate_fmt}]', colour='yellow')               
@@ -78,3 +155,8 @@ if __name__ == '__main__':
         for stock_query in queries:
             settings.init(stock_query)            
             work_flow.prepare()
+            leaderboard += settings.leaderboard
+        leaderboard_today += leaderboard
+        leaderboard_markdown = rebuild_leaderboard_markdown(leaderboard)  # 剔除重复股票，并排序
+        if len(leaderboard_markdown) > 0:
+            push(leaderboard_markdown) 

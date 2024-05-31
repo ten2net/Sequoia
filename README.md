@@ -1,11 +1,21 @@
-## Sequoia选股系统
+## 甘州图灵封神榜（测试版）使用说明：
+
+ 1、每三分钟发一次榜（榜间涨幅差从大到小）。
+   上榜的都是按照短线策略（最多持有两天）选出的目标
+ 2、数据项解释：
+   股票代码 股票简称 最新价 涨跌幅 
+   成交额 初榜涨幅差 榜间涨幅差
+   其中：
+      初榜涨幅差 = 当前涨跌幅 - 今日首次上榜时的涨跌幅
+      榜间涨幅差 = 当前涨跌幅 - 最近一次榜时的涨跌幅
+ 3、目前该策略还很不成熟，不建议跟票。
+ 
 ### 简介
 本程序使用[AKShare接口](https://github.com/akfamily/akshare)，从东方财富获取数据。
 
 本程序实现了若干种选股策略，大家可以自行选择其中的一到多种策略组合使用，参见[work_flow.py](https://github.com/sngyai/Sequoia/blob/master/work_flow.py#L28-L38)，也可以实现自己的策略。
 
 各策略中的`end_date`参数主要用于回测。
-
 ## 准备工作:
 ###  环境&依赖管理
 推荐使用 Miniconda来进行 Python 环境管理 [Miniconda — conda documentation](https://docs.conda.io/en/latest/miniconda.html)
