@@ -120,7 +120,6 @@ def job(leaderboard_today):
 
 def rebuild_leaderboard_markdown(leaderboard):
     if len(leaderboard) > 0:
-        print("leaderboard:", leaderboard)
         for item in leaderboard:
             current = ast.literal_eval(item['当前行情'])
             current_change = float(current[3][:-1])
@@ -128,11 +127,9 @@ def rebuild_leaderboard_markdown(leaderboard):
             if len(leaderboard_today) > 0:
                 first_match = next(
                     (row for row in leaderboard_today if row['股票代码'] == item['股票代码']), None)
-                print("first_match", first_match)
                 if first_match:
                     first_listed_change = float(
                         ast.literal_eval(first_match['当前行情'])[3][:-1])
-                    print("first_listed_change", first_listed_change)
                 item['初榜涨幅差'] = (current_change - first_listed_change)
                 # 求与上一榜的涨幅差
                 second_to_last_change = current_change
@@ -145,7 +142,7 @@ def rebuild_leaderboard_markdown(leaderboard):
                 item['榜间涨幅差'] = (current_change - second_to_last_change)
 
         df_leaderboard = pd.DataFrame(leaderboard)
-        print("leaderboard_today:", leaderboard_today)
+        # print("leaderboard_today:", leaderboard_today)
 
         df_leaderboard = df_leaderboard.groupby('股票代码').apply(
             lambda x: x[x.groupby('股票代码').cumcount() == (x.groupby('股票代码').cumcount().max())])
