@@ -129,22 +129,7 @@ def build_markdown_msg(stocks_df):
     stocks_list = stocks_df['markdown'].tolist()
     return "\n".join(stocks_list)
 
-def notify():
-    # 获取当前时间
-    now = datetime.now()
-    # 设定每天9点为任务执行时间
-    nine_am = datetime.combine(now.date(), time(9, 26))
-    # 如果当前时间已经超过9点26分，则将任务时间设置为明天的9点
-    if now > nine_am:
-        nine_am += timedelta(days=1)
-    # 计算时间差
-    time_difference = nine_am - now
-    # 将时间差转换为分钟
-    minutes_to_nine_am = time_difference.total_seconds() / 60
-    # 打印提示信息
-    print(f"距离9点26分策略执行还有 {int(minutes_to_nine_am)} 分钟。")    
-def get_top_30_deal_volume_stocks():
-    notify()
+def get_top_30_deal_volume_stocks(pbar):
     stock_zh_a_spot_df = ak.stock_zh_a_spot_em()
     # 两市剔除ST股、剔除科创板股、剔除北交所股
     stock_zh_a_spot_df = stock_zh_a_spot_df[~stock_zh_a_spot_df['代码'].astype(
@@ -177,35 +162,32 @@ def get_top_30_deal_volume_stocks():
         wecom = WeCom(webhook_url)
         response = wecom.send_message(msg)
         
+    seconds_to_target = next_exec_seconds(hour=9,minute=26)        
+    pbar.reset(seconds_to_target)
+
+def next_exec_seconds(hour=9,minute=26):
     now = datetime.now()
-    hour = 16
-    minute = 10
-    target_time = datetime(now.year, now.month, now.day, hour, minute)
-    if now >= target_time:
-        target_time += timedelta(days=1)
-    time_difference = target_time - now
-    seconds_to_target = round(time_difference.total_seconds())        
-
-
-if __name__ == '__main__':
-
-    now = datetime.now()
-    hour = 9
-    minute = 26
     target_time = datetime(now.year, now.month, now.day, hour, minute)
     if now >= target_time:
         target_time += timedelta(days=1)
     time_difference = target_time - now
     seconds_to_target = round(time_difference.total_seconds())
+    return seconds_to_target
+
+if __name__ == '__main__':
+    hour = 9
+    minute = 26
+    seconds_to_target = next_exec_seconds(hour,minute)  
     # print(seconds_to_target)
-    EXEC_TIME = f"0{hour}:{minute}"
-    schedule.every().day.at(EXEC_TIME).do(get_top_30_deal_volume_stocks)
-    # schedule.every(3).minutes.do(
-    #     lambda: get_top_30_deal_volume_stocks())
     
     pbar = tqdm(range(seconds_to_target), desc='正在等待任务执行...',
                 bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed} < {remaining}, {rate_fmt}]', colour='yellow')
 
+    EXEC_TIME = f"{'0' + str(hour) if hour < 10 else str(hour)}:{minute}"
+    schedule.every().day.at(EXEC_TIME).do(
+        lambda: get_top_30_deal_volume_stocks(pbar))
+    # schedule.every(3).minutes.do(
+    #     lambda: get_top_30_deal_volume_stocks())
     while True:
         schedule.run_pending()
         time.sleep(1)
