@@ -7,7 +7,7 @@ BALANCE = 200000
 # 最后一个交易日收市价为指定区间内最高价
 import pandas as pd
 
-def check_enter(code_name, data, end_date=None, threshold=60):
+def check_enter(code_name, data, end_date=None, threshold=26):
     """
     判断股票是否在最近指定天数内创新高。
     
@@ -36,7 +36,7 @@ def check_enter(code_name, data, end_date=None, threshold=60):
     last_close = data['收盘'].iloc[-1]
     
     return last_close >= max_price
-def check_enter2(code_name, data, end_date=None, threshold=60):
+def check_enter2(code_name, data, end_date=None, threshold=26):
     """
     判断股票是否在最近指定天数内创新高。
     

@@ -38,12 +38,14 @@ def init(q=""):
     query=q
     print(colored(q,'yellow'))
     df = pywencai.get(query=query)
+    # print(df)
     if df is not None:
         try:
             df = df[['股票代码','股票简称']]
             df['股票代码'] = df['股票代码'].str.slice(start=0, stop=6)
-            df = df[~df['股票代码'].str.startswith('68')]  # 排除以 '68' 开头的代码
+            # df = df[~df['股票代码'].str.startswith('68')]  # 排除以 '68' 开头的代码
             df = df[~df['股票代码'].str.startswith('4')]  # 排除以 '4' 开头的代码
+            df = df[~df['股票代码'].str.startswith('8')]  # 排除以 '8' 开头的代码
             # df.index=df[]
             df.columns = ['代码','名称']
             
@@ -59,6 +61,9 @@ def init(q=""):
             
         except:
           print('An exception occurred')
+    else:
+        lhb_df =pd.DataFrame()
+        top_list=[] 
  
     
 

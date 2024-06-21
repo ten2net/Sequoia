@@ -1,0 +1,10 @@
+cron: true
+# 运行周期，单位为分钟
+cron_period: 5
+data_dir: "data"
+end_date: 
+
+push:
+  enable: true
+  wxpusher_uid: ""
+  wxpusher_token: ""

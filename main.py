@@ -62,7 +62,7 @@ leaderboard_today = []
 
 def is_trading_time():
     now = datetime.datetime.now()
-    work_start_1 = datetime.time(9, 20)
+    work_start_1 = datetime.time(9, 40)
     work_end_1 = datetime.time(11, 30)
     work_start_2 = datetime.time(13, 0)
     work_end_2 = datetime.time(15, 0)
@@ -80,15 +80,19 @@ def is_trading_time():
 def gen_dynamic_query():
     dynamic_queries = []
     queries = [
-        '今日涨跌幅大于0.5，且涨跌幅排名前3的行业',
-        '今日涨跌幅大于0.5，且资金净流入排名前3的行业',
-        '三日区间涨幅大于2.5%的行业板块'
+        '今日涨跌幅大于0.5涨跌幅排名前5的行业',
+        '三日区间涨幅前五的行业板块',
+        # '三日区间涨幅大于2.5%的行业板块'
     ]
     results = []
-    for query in queries:
-        df = pywencai.get(query=query, query_type="zhishu")
-        if df is not None:
-            results += df['指数简称'].to_list()
+    while len(results) == 0:
+        for query in queries:
+            df = pywencai.get(query=query, query_type="zhishu")
+            if df is not None:
+                try:
+                    results += df['指数简称'].to_list()
+                except:
+                    print('Something went wrong',df)          
     results = list(set(results))
     if len(results) > 0:
         # dynamic_queries += [f'技术面评分排名前10的非ST、非科创板{industry_sector}行业未涨停股票' for industry_sector in results ]
@@ -144,8 +148,8 @@ def rebuild_leaderboard_markdown(leaderboard):
         df_leaderboard = pd.DataFrame(leaderboard)
         # print("leaderboard_today:", leaderboard_today)
 
-        df_leaderboard = df_leaderboard.groupby('股票代码').apply(
-            lambda x: x[x.groupby('股票代码').cumcount() == (x.groupby('股票代码').cumcount().max())])
+        df_leaderboard = df_leaderboard.groupby('股票代码',group_keys=True).apply(
+            lambda x: x[x.groupby('股票代码',group_keys=True).cumcount() == (x.groupby('股票代码',group_keys=True).cumcount().max())])
         df_leaderboard.reset_index(drop=True, inplace=True)
         df_leaderboard['当前行情'] = df_leaderboard['当前行情'].apply(
             lambda item: f"""[{item[1:-1].replace("'", "").replace(",", " ")}](https://www.iwencai.com/unifiedwap/result?w={ast.literal_eval(item)[0]}&querytype=stock)""")

@@ -44,7 +44,6 @@ def prepare():
 
     # if datetime.datetime.now().weekday() == 0:
     #     strategies['均线多头'] = keep_increasing.check
-
     process(stocks, strategies)
 
     # logging.info(
