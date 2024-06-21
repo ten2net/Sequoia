@@ -29,11 +29,11 @@ def init(q=""):
         config = yaml.safe_load(file)
     if q == "":
         return
-    df_lhb = ak.stock_lhb_stock_statistic_em(symbol="近六月")  #龙虎榜个股上榜统计
-    mask = (df_lhb['买方机构次数'] > 1)  # 机构买入次数大于1
-    df_lhb = df_lhb.loc[mask]
-    # top_list = df['代码'].tolist()
-    df_lhb = df_lhb[['代码','名称']]
+    # df_lhb = ak.stock_lhb_stock_statistic_em(symbol="近六月")  #龙虎榜个股上榜统计
+    # mask = (df_lhb['买方机构次数'] > 1)  # 机构买入次数大于1
+    # df_lhb = df_lhb.loc[mask]
+    # # top_list = df['代码'].tolist()
+    # df_lhb = df_lhb[['代码','名称']]
     
     query=q
     print(colored(q,'yellow'))
@@ -47,13 +47,16 @@ def init(q=""):
             # df.index=df[]
             df.columns = ['代码','名称']
             
-            # 使用merge求交集
-            intersection = df_lhb.merge(df, on='代码', how='inner')
-            lhb_df =intersection
-            top_list=intersection['代码'].tolist()  
+            # # 使用merge求交集
+            # intersection = df_lhb.merge(df, on='代码', how='inner')
+            # lhb_df =intersection
+            # top_list=intersection['代码'].tolist()  
                   
             lhb_df =df
             top_list=df['代码'].tolist()        
+            # lhb_df =df_lhb
+            # top_list=df_lhb['代码'].tolist()        
+            
         except:
           print('An exception occurred')
  
