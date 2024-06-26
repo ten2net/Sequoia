@@ -86,11 +86,16 @@ def get_stock_data(stock_code):
     start_date_str = start_date.strftime('%Y%m%d')
     stock_zh_a_hist_df = ak.stock_zh_a_hist(
         symbol=stock_code, start_date=start_date_str, adjust='')
-    # 获取前一日的收盘价和今日的开盘价
-    last_close = stock_zh_a_hist_df.iloc[-2]['收盘']
+    # 新股特殊处理，防止报错
+    last_close = stock_zh_a_hist_df.iloc[-1]['开盘']
     today_open = stock_zh_a_hist_df.iloc[-1]['开盘']
-    # 获取前三日的开盘价
-    last_open_4 = stock_zh_a_hist_df.iloc[-4]['开盘']
+    last_open_4 = stock_zh_a_hist_df.iloc[-1]['开盘']
+    
+    if len(stock_zh_a_hist_df) > 4:  # 非新股特殊处理
+        last_close = stock_zh_a_hist_df.iloc[-2]['收盘']
+        today_open = stock_zh_a_hist_df.iloc[-1]['开盘']
+        # 获取前三日的开盘价
+        last_open_4 = stock_zh_a_hist_df.iloc[-4]['开盘']
 
     # 检查股票是否在近20日有过涨停
     stock_zh_a_hist_df['日期'] = pd.to_datetime(stock_zh_a_hist_df['日期'])
