@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import akshare as ak
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,time
 import time
 import schedule
 from tqdm import tqdm
@@ -10,7 +10,7 @@ import argparse
 import pywencai
 
 # ==================      集合竞价策略 （游资合力股的集合竞价策略）      ======================
-# 
+#
 # 1、两市剔除ST股、剔除科创板股、剔除北交所股
 # 2、9.25分按集合竞价金额降序排序，选出开盘金额最大前20只股
 # 3、选出市值低于300亿的个股
@@ -24,6 +24,7 @@ import pywencai
 # =========================================================================================
 
 # 开盘10分钟内大单净额/流通市值排名前20
+
 
 class WeCom:
     def __init__(self, webhook_url):
@@ -39,7 +40,7 @@ class WeCom:
         data = {
             "msgtype": "markdown",
             "markdown": {
-                "content": f'## <font color="comment">甘州图灵竞价策略{formatted_now}</font> \n\n {message}'
+                "content": f'## <font color="comment">甘州图灵侏罗纪超短捕捉策略{formatted_now}</font> \n\n {message}'
             }
         }
         response = requests.post(self.webhook_url, json=data)
@@ -55,8 +56,15 @@ def cta_strategy(df):
     df['last_3_high'] = df['close_price'] > df['last_open_4']
     df = df.where(df['last_3_high'], np.nan).dropna(
         subset=['last_3_high'])
+    print(df)
     # 昨天收盘价低于今日开盘价（今日高开）
-    df['today_open_high'] = df['open_price'] > df['close_price']
+    df['today_open_high'] = df['open_price'] >0.9 * df['close_price'] 
+    # df['today_open_high'] = np.where(
+    #     (df['open_price'] > 0.8 * df['close_price']) &
+    #     (df['open_price'] < 1.8 * df['close_price']),
+    #     True,
+    #     False
+    # )
     df = df.where(df['today_open_high'], np.nan).dropna(
         subset=['today_open_high'])
     print(df)
@@ -67,7 +75,7 @@ def cta_strategy(df):
         100 * (df["open_price"] - df["close_price"]) / df["close_price"], 2)
     df = df[["code", "name", "close_price", "open_price", "涨幅"]]
     df.sort_values(by='涨幅', ascending=False, inplace=True)
-    
+
     return df
 
 # 定义获取股票数据的函数
@@ -79,22 +87,16 @@ def get_stock_data(stock_code):
     stock_zh_a_hist_df = ak.stock_zh_a_hist(
         symbol=stock_code, start_date=start_date_str, adjust='')
     # 获取前一日的收盘价和今日的开盘价
-    # print(stock_code,stock_zh_a_hist_df)
-    last_close = stock_zh_a_hist_df.iloc[-1]['开盘']
+    last_close = stock_zh_a_hist_df.iloc[-2]['收盘']
     today_open = stock_zh_a_hist_df.iloc[-1]['开盘']
-    last_open_4 = stock_zh_a_hist_df.iloc[-1]['开盘']
-    
-    if len(stock_zh_a_hist_df) > 4:  # 非新股特殊处理
-        last_close = stock_zh_a_hist_df.iloc[-2]['收盘']
-        today_open = stock_zh_a_hist_df.iloc[-1]['开盘']
-        # 获取前三日的开盘价
-        last_open_4 = stock_zh_a_hist_df.iloc[-4]['开盘']
+    # 获取前三日的开盘价
+    last_open_4 = stock_zh_a_hist_df.iloc[-4]['开盘']
 
     # 检查股票是否在近20日有过涨停
     stock_zh_a_hist_df['日期'] = pd.to_datetime(stock_zh_a_hist_df['日期'])
     stock_zh_a_hist_df.sort_values(by='日期', ascending=False, inplace=True)
     recent_20_days_df = stock_zh_a_hist_df.head(20)
-    has_zt_in_20d = (recent_20_days_df['涨跌幅'] >= 9.9).any()
+    has_zt_in_20d = (recent_20_days_df['涨跌幅'] >= 9).any()
 
     # 获取总市值和行业
     stock_info = ak.stock_individual_info_em(symbol=stock_code)
@@ -135,64 +137,67 @@ def build_markdown_msg(stocks_df):
     stocks_df['markdown'] = stocks_df['markdown'].astype(str)
     stocks_list = stocks_df['markdown'].tolist()
     return "\n".join(stocks_list)
+def is_trading_time():
+    now = datetime.now()
+    work_start_1 = time(9, 30)
+    work_end_1 = time(11, 30)
+    work_start_2 = time(13, 0)
+    work_end_2 = time(15, 0)
+
+    # 判断是否为工作日（周一到周五）
+    if now.weekday() < 5:  # 0是周一，4是周五
+        # 判断当前时间是否在上班时间内
+        if work_start_1 <= now.time() <= work_end_1:
+            return True
+        if work_start_2 <= now.time() <= work_end_2:
+            return True
+    return False
 
 def get_top_30_deal_volume_stocks(pbar=None):
-    stock_zh_a_spot_df = ak.stock_zh_a_spot_em()
-    # 两市剔除ST股、剔除科创板股、剔除北交所股
-    stock_zh_a_spot_df = stock_zh_a_spot_df[~stock_zh_a_spot_df['代码'].astype(
-        str).str.startswith('4')]
-    stock_zh_a_spot_df = stock_zh_a_spot_df[~stock_zh_a_spot_df['代码'].astype(
-        str).str.startswith('8')]
-    stock_zh_a_spot_df = stock_zh_a_spot_df[~stock_zh_a_spot_df['代码'].astype(
-        str).str.startswith('68')]
-    stock_zh_a_spot_df = stock_zh_a_spot_df[~stock_zh_a_spot_df['名称'].astype(
-        str).str.startswith('N')]
-    # 按集合竞价金额降序排序，选出开盘金额最大前20只股
-    stock_zh_a_spot_df_sorted = stock_zh_a_spot_df.sort_values(
-        by='成交额', ascending=False)
-    top_20_stocks = stock_zh_a_spot_df_sorted.head(20)
-    stock_codes = top_20_stocks['代码'].to_list()
 
-    query = "开盘10分钟内大单净额/流通市值排名前20"
-    df = pywencai.get(query=query, query_type="stock")
-    print(df)
-    if df is not None:
+    if is_trading_time():
+        now = datetime.now()
+        # 设置9点30分
+        nine_thirty = datetime.combine(datetime.today(), time(9, 30))
+        time_difference = now - nine_thirty
+        minutes_difference = round(time_difference.total_seconds() / 60 )       
+        query = f"开盘{minutes_difference}分钟内大单净额/流通市值排名前20"
+        df = pywencai.get(query=query, query_type="stock")
         try:
+            # 两市剔除ST股、剔除科创板股、剔除北交所股
             df = df[~df['股票代码'].astype(str).str.startswith('4')]
             df = df[~df['股票代码'].astype(str).str.startswith('8')]
             df = df[~df['股票代码'].astype(str).str.startswith('68')]
-            df = df[~df['股票简称'].astype(str).str.startswith('N')]            
+            df = df[~df['股票简称'].astype(str).str.startswith('N')]
             df = df[~df['股票简称'].astype(str).str.startswith('*')]
-            df = df[~df['股票简称'].astype(str).str.startswith('ST')]            
-            top20 = df['股票代码'].to_list()
-            top20 =[ item[:6] for item in top20]
-            stock_codes += top20
-        except:
-            print('Something went wrong',df)     
-    stock_codes = list(set(stock_codes))
-    data = [get_stock_data(code) for code in stock_codes]
+            df = df[~df['股票简称'].astype(str).str.startswith('ST')]
+            df = df.sort_values(by=df.columns[4], ascending=False)
+            # df = df.sort_values(by='最新涨跌幅', ascending=False)
+            stock_codes = df['股票代码'].to_list()
+            stock_codes = [item[:6] for item in stock_codes]
+            data = [get_stock_data(code) for code in stock_codes]
 
-    # 运行策略函数
-    df = pd.DataFrame(data)
-    selected_stocks = cta_strategy(df)
-    # print(selected_stocks)
-    if len(selected_stocks)<1:
-        return
+            # 运行策略函数
+            df = pd.DataFrame(data)
+            selected_stocks = cta_strategy(df)
+            if len(selected_stocks)<1:
+                return
+            msg = build_markdown_msg(selected_stocks)
+            keys = [
+                '88aa58e5-818a-471d-8786-84ee85984467',
+                'e312ad13-1f18-430b-9c66-304922694dc3'
+            ]
+            for key in keys:
+                webhook_url = f"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={key}"
+                wecom = WeCom(webhook_url)
+                response = wecom.send_message(msg)
+        except Exception as e:
+            print(repr(e), df)
 
-    msg = build_markdown_msg(selected_stocks)
-    keys = [
-        '88aa58e5-818a-471d-8786-84ee85984467',
-        'e312ad13-1f18-430b-9c66-304922694dc3'
-    ]
-    for key in keys:
-        webhook_url = f"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={key}"
-        wecom = WeCom(webhook_url)
-        response = wecom.send_message(msg)
-    if pbar:    
-        seconds_to_target = next_exec_seconds(hour=9,minute=26)        
-        pbar.reset(seconds_to_target)
-
-def next_exec_seconds(hour=9,minute=26):
+    if pbar:
+        seconds_to_target = 3 * 60
+        pbar.reset(seconds_to_target)            
+def next_exec_seconds(hour=9, minute=41):
     now = datetime.now()
     target_time = datetime(now.year, now.month, now.day, hour, minute)
     if now >= target_time:
@@ -201,29 +206,29 @@ def next_exec_seconds(hour=9,minute=26):
     seconds_to_target = round(time_difference.total_seconds())
     return seconds_to_target
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="处理命令行参数")
-    parser.add_argument('--dev', action='store_true', help='Set dev mode to true')
+    parser.add_argument('--dev', action='store_true',
+                        help='Set dev mode to true')
     args = parser.parse_args()
-    
+
     if args.dev:
         get_top_30_deal_volume_stocks()
     else:
         hour = 9
-        minute = 26
-        seconds_to_target = next_exec_seconds(hour,minute)  
-        # print(seconds_to_target)
-        
+        minute = 41
+        seconds_to_target = next_exec_seconds(hour, minute)
+        seconds_to_target = 3 * 60
         pbar = tqdm(range(seconds_to_target), desc='正在等待任务执行...',
                     bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed} < {remaining}, {rate_fmt}]', colour='yellow')
 
-        EXEC_TIME = f"{'0' + str(hour) if hour < 10 else str(hour)}:{minute}"
-        schedule.every().day.at(EXEC_TIME).do(
+        # EXEC_TIME = f"{'0' + str(hour) if hour < 10 else str(hour)}:{minute}"
+        # schedule.every().day.at(EXEC_TIME).do(
+        #     lambda: get_top_30_deal_volume_stocks(pbar))
+        schedule.every(3).minutes.do(
             lambda: get_top_30_deal_volume_stocks(pbar))
-        # schedule.every(3).minutes.do(
-        #     lambda: get_top_30_deal_volume_stocks())
         while True:
             schedule.run_pending()
             time.sleep(1)
             pbar.update(1)  # 手动更新进度条
-

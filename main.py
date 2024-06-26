@@ -80,8 +80,8 @@ def is_trading_time():
 def gen_dynamic_query():
     dynamic_queries = []
     queries = [
-        '今日涨跌幅大于0.5涨跌幅排名前5的行业',
-        '三日区间涨幅前五的行业板块',
+        '今日涨跌幅大于0.5涨跌幅排名前三的行业',
+        '三日区间涨幅排名前三的行业板块',
         # '三日区间涨幅大于2.5%的行业板块'
     ]
     results = []
@@ -97,9 +97,11 @@ def gen_dynamic_query():
     if len(results) > 0:
         # dynamic_queries += [f'技术面评分排名前10的非ST、非科创板{industry_sector}行业未涨停股票' for industry_sector in results ]
         dynamic_queries += [
-            f'流通市值大于100亿且成交金额排名前100名的{industry_sector}行业未涨停股票' for industry_sector in results]
+            f'总市值大于100亿且成交金额排名前100名的{industry_sector}行业未涨停股票' for industry_sector in results]
+        # dynamic_queries += [
+        #     f'换手率排名在20到100之间，技术形态为价升量涨的非ST、非科创板的{industry_sector}行业未涨停股票' for industry_sector in results]
         dynamic_queries += [
-            f'换手率排名在20到100之间，技术形态为价升量涨的非ST、非科创板的{industry_sector}行业未涨停股票' for industry_sector in results]
+            f'量比大于1.8小于3突破压力位的非ST、非科创板的{industry_sector}行业未涨停股票' for industry_sector in results]
     return dynamic_queries
 
 
