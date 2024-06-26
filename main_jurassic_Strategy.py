@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import akshare as ak
-from datetime import datetime, timedelta,time
+from datetime import datetime, timedelta
 import time
 import schedule
 from tqdm import tqdm
@@ -138,6 +138,7 @@ def build_markdown_msg(stocks_df):
     stocks_list = stocks_df['markdown'].tolist()
     return "\n".join(stocks_list)
 def is_trading_time():
+    from datetime import datetime, time
     now = datetime.now()
     work_start_1 = time(9, 30)
     work_end_1 = time(11, 30)
@@ -154,7 +155,7 @@ def is_trading_time():
     return False
 
 def get_top_30_deal_volume_stocks(pbar=None):
-
+    from datetime import datetime, time
     if is_trading_time():
         now = datetime.now()
         # 设置9点30分
