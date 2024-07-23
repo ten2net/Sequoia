@@ -8,8 +8,6 @@ from tqdm import tqdm
 from termcolor import colored
 import argparse
 import pywencai
-import math
-
 
 # ==================      集合竞价策略 （游资合力股的集合竞价策略）      ======================
 #
@@ -173,9 +171,7 @@ def get_top_30_deal_volume_stocks(pbar=None):
         nine_thirty = datetime.combine(datetime.today(), time(9, 30))
         time_difference = now - nine_thirty
         minutes_difference = round(time_difference.total_seconds() / 60 ) - 2      
-        query = f"开盘{minutes_difference}分钟内大单净额/流通市值排名前50"
-        if now.time() >=  time(13, 15) :
-            query = f"最近15分钟分时区间DDE大单净额/流通市值排名前50"
+        query = f"今日涨停封成比前30的股票"
         print(query)
         df = pywencai.get(query=query, query_type="stock")
         try:
