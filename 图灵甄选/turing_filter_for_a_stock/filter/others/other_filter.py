@@ -1,4 +1,4 @@
-from ..abstract_filter import StockFilter
+from ..base import StockFilter
 
 class OtherFilter(StockFilter):
     def filter(self, df):

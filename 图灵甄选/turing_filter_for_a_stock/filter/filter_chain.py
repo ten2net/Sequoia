@@ -1,4 +1,4 @@
-from .abstract_filter import StockFilter
+from .base import StockFilter
 from typing import List
 class FilterChain:
     def __init__(self,filters:List[StockFilter]=[]):

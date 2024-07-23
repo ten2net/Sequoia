@@ -1,16 +1,11 @@
 from core.constants import Constants
-from data_collector.akshare_data_collector import AkshareDataCollector
+from collector.akshare_data_collector import AkshareDataCollector
 from filter.filter_chain import FilterChain
-from notification.wecom_notification import WeComNotification
+from notification.wecom import WeComNotification
 from radar.base import StockRadar
-from stock_favor_management.stock_favor_management import StockFavorManagement
-from stock_pool.stock_pool import AmountStockPool, FavorStockPool
+from favor.favor import StockFavorManagement
+from pool.pool import AmountStockPool, FavorStockPool
 from filter.trading.indictor_trading_filter import IndicatorTradingFilter
-# from turing_filter_for_a_stock.scorer import PriceScorer, VolumeScorer, PEScorer, SentimentScorer
-# from turing_filter_for_a_stock.filter import StockFilter, get_filter
-# from turing_filter_for_a_stock.voting import WeightedVotingFilter
-# from turing_filter_for_a_stock.stock_favor_management import add_to_favorites, send_notification
-
 
 class CCIStockRadar(StockRadar):
     def __init__(self, cci_threshold: int = 300):

@@ -1,17 +1,8 @@
 
 from typing import List
-import math
-import pandas as pd
-import pandas_ta as ta
-import akshare as ak
-from datetime import datetime, timedelta
-import math
-from tqdm import tqdm
-
-from stock_pool.base import StockPool
-from stock_favor_management.stock_favor_management import StockFavorManagement
-import requests
-from data_collector.akshare_data_collector import AkshareDataCollector
+from pool.base import StockPool
+from favor.favor import StockFavorManagement
+from collector.akshare_data_collector import AkshareDataCollector
 
 class AmountStockPool(StockPool):
   def __init__(self):

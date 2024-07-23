@@ -1,5 +1,4 @@
 import os
-import pandas as pd
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import time
@@ -8,7 +7,7 @@ from tqdm import tqdm
 import argparse
 import threading
 
-from radar.cci_88_radar import CCIStockRadar
+from radar.cci_88 import CCIStockRadar
 
 def next_exec_seconds(hour=9, minute=26):
     now = datetime.now()
@@ -49,7 +48,11 @@ def main():
     parser.add_argument('--dev', action='store_true',
                         help='Set dev mode to true')
     args = parser.parse_args()
-    load_dotenv()  # Load environment variables from .env file
+    # load_dotenv()  # Load environment variables from .env file
+    os.environ.pop("EM_APPKEY")
+    os.environ.pop("EM_HEADER")
+    os.environ.pop("WECOM_GROUP_BOT_KEYS")       
+    load_dotenv() 
 
     if args.dev:
         start_financial_radar_system()

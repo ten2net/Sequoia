@@ -1,4 +1,4 @@
-from ..abstract_filter import StockFilter
+from ..base import StockFilter
 
 class IndicatorTradingFilter(StockFilter):
     def __init__(self, indicator_name: str, threshold: float, comparison_operator: str = '>='):

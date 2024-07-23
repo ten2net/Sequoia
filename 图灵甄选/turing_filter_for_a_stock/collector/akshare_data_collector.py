@@ -3,7 +3,7 @@ import math
 import pandas as pd
 import pandas_ta as ta
 import akshare as ak
-from .data_collector import DataCollector
+from .base import DataCollector
 from core.constants import Constants
 from datetime import datetime, timedelta
 import math

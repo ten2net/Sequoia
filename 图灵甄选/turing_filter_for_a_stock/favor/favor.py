@@ -1,5 +1,7 @@
 from typing import List
-import stock_favor_management.em_favor_api as em
+
+from dotenv import load_dotenv
+import favor.em_favor_api as em
 import requests
 import os
 import json
@@ -7,9 +9,12 @@ import json
 
 class StockFavorManagement:
     def __init__(self):
+        load_dotenv()  
         self.session = requests.Session()
+
         appkey = os.environ.get('EM_APPKEY')
-        appHeader =json.loads(os.environ.get('EM_HEADER'))        
+        appHeader =json.loads(os.environ.get('EM_HEADER'))
+     
         em.APIKEY = appkey
         em.HEADER['Cookie']=appHeader[0]
 
