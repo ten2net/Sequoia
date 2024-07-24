@@ -34,6 +34,8 @@ class AkshareDataCollector(DataCollector):
         df['close_yestday'] = df['close'].shift(1)
         df['pct_yestday'] = df['pct'].shift(1)
         df['volume_yestday'] = df['volume'].shift(1)
+        df['amount_yestday'] = df['amount'].shift(1)
+        df['turnover_yestday'] = df['turnover'].shift(1)
         df['date'] = pd.to_datetime(df['date'])
         df = df.set_index('date', drop=False)
         return df

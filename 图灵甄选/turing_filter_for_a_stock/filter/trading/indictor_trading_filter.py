@@ -1,4 +1,5 @@
 from ..base import StockFilter
+import pandas as pd
 
 class IndicatorTradingFilter(StockFilter):
     def __init__(self, indicator_name: str, threshold: float, comparison_operator: str = '>='):
@@ -18,7 +19,7 @@ class IndicatorTradingFilter(StockFilter):
             raise ValueError(f"Invalid comparison operator: {comparison_operator}")
         self.comparison_operator = self.comparison_operators[comparison_operator]
 
-    def filter(self, df):
+    def filter(self, df:pd.DataFrame)->pd.DataFrame:
         # 使用lambda函数和比较运算符的映射来生成条件
         condition = self.comparison_operator(df[self.indicator], self.threshold)
         return df[condition]
