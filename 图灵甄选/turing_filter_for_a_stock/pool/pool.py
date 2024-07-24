@@ -23,8 +23,6 @@ class AmountStockPool(StockPool):
     df.sort_values(by='amount', ascending=False, inplace=True)
     df = df.head(k).copy()
     symbols = df['code'].tolist()
-    symbols += self.symbols
-    symbols = list(set(symbols))
     return symbols  
 
   
@@ -48,8 +46,8 @@ class FavorStockPool(StockPool):
     symbols=[]
     for group in self.groups:
       symbols += self.sfm.get_symbols(group_name=group)
-    symbols += self.symbols
-    symbols = list(set(symbols))      
+    symbols = list(set(symbols))  
+    # df[df['symbol'].isin(symbols)]    
     return symbols
 
     

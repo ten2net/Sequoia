@@ -32,8 +32,8 @@ def start_financial_radar_system():
         无返回值。    
     """    
     stock_radares = [
-        CCIStockRadar(cci_threshold=300),
-        CCIStockRadar(cci_threshold=200),
+        CCIStockRadar(name="斐纳斯强势300", cci_threshold=300),
+        CCIStockRadar(name="斐纳斯强势250", cci_threshold=250),
     ]
     threads = []
     for radar in stock_radares:

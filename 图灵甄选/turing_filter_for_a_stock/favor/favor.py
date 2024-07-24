@@ -22,12 +22,6 @@ class StockFavorManagement:
         symbols = em.list_entities(group_name=group_name, session=self.session)
         return symbols
 
-    # def get_symbols(self, group_names: List[str] = ["自选股"]):
-    #     symbols = []
-    #     for group in group_names:
-    #         symbols += em.list_entities(group_name=group, session=self.session)
-    #     return list(set(symbols))
-
     def add_to_group(self, symbols: List[str] = [], group_name: str = "斐纳斯精选"):
         em.update_em_favor_list(
             symbols, group_full_name=f"{group_name[:3]}全榜", group_new_name=group_name)

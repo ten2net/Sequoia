@@ -29,7 +29,7 @@ class NameFilter(StockFilter):
         return df
 
 
-class PeFilter(StockFilter):
+class PEFilter(StockFilter):
     def __init__(self, threshold: float = 100.0):
         """
         两市剔除市盈率大于threshold的股票
@@ -52,7 +52,7 @@ class TotalCapitalFilter(StockFilter):
         return df[(df['total_capital'] > self.min_threshold) & (df['total_capital'] < self.max_threshold)]
 
 
-class circulatingCapitalFilter(StockFilter):
+class CirculatingCapitalFilter(StockFilter):
     def __init__(self, min_threshold: int = 30, max_threshold: int = 600):
         """
         两市剔除流通市值大于min_threshold亿小于max_threshold亿的股票
