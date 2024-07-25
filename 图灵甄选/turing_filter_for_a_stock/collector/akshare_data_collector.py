@@ -29,7 +29,9 @@ class AkshareDataCollector(DataCollector):
 
     def get_data(self, symbol: str, start_date: str = None, end_date: str = None, adjust: str = "") -> pd.DataFrame:
         df = self.__fetch_data__(symbol, start_date, end_date)
+        df = df.drop(['股票代码'], axis=1)
         df = df.drop(['涨跌额'], axis=1)
+        # print(df.columns)
         df.columns = list(Constants.BAR_DAY_COLUMNS)
         df['close_yestday'] = df['close'].shift(1)
         df['pct_yestday'] = df['pct'].shift(1)

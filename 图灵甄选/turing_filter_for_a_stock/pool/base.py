@@ -3,6 +3,8 @@ from typing import List
 import pandas as pd
 from tqdm import tqdm
 
+from kline.kline_style import add_cdl_pattern
+
 class StockPool(ABC):
     @abstractmethod
     def get_symbols(self) -> List[str]:
@@ -40,7 +42,7 @@ class StockPool(ABC):
         
   
         return df_last_rows
-    def get_data_with_indictores(self, symbols: List[str])->pd.DataFrame:
+    def get_data_with_indictores(self, symbols: List[str],withCDL: bool=False)->pd.DataFrame:
         """
         获取每个symbol带有指标的最新行情数据。
         
@@ -61,6 +63,8 @@ class StockPool(ABC):
         for symbol in symbols:
             df_symbol = self.adc.get_data_with_indictores(symbol)
             if not df_symbol.empty:  # 确保DataFrame不是空的
+                if withCDL:  
+                   add_cdl_pattern(df_symbol) # 添加K线形态CDL指标
                 last_row = df_symbol.iloc[-1:].copy()  # 获取最后一行并复制
                 last_row['code'] = symbol
                 last_rows_data.append(last_row)
@@ -69,3 +73,4 @@ class StockPool(ABC):
         # 使用pd.concat合并最后一行的DataFrame列表
         df_last_rows = pd.concat(last_rows_data)
         return df_last_rows
+    

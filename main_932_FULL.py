@@ -90,18 +90,11 @@ def build_markdown_msg(stocks_df,ganzhou_index):
     columns = stocks_df.columns.tolist()
     # title = " ".join(columns) # ['代码','股票简称','热度排名', '开盘2分钟涨幅','最新涨跌幅','最新价']
     title = "代码 简称 热度排名\n 开盘价 开盘2分钟涨幅\n 最新价 最新涨幅 "
-    
     markdown_df = stocks_df.apply(
-        lambda x: f'[{x[0]} {x[1]} {x[2]:.0f}](https://www.iwencai.com/unifiedwap/result?w={x[0]}&querytype=stock)'
-        + f'\n  <font color="info">{x[4]:.2f}  {x[5]:.2f}%</font>'
-        + f'\n  <font color="warning">{x[6]:.2f}  {x[7]:.2f}%</font>'
+        lambda x: f"""[{x['代码']} {x['股票简称']} {x['热度排名']:.0f}](https://www.iwencai.com/unifiedwap/result?w={x['代码']}&querytype=stock)"""
+        + f"""\n  <font color="info">{x['开盘2分钟价格']:.2f}  {x['开盘2分钟涨幅']:.2f}%</font>"""
+        + f"""\n  <font color="warning">{x['最新价']:.2f}  {x['最新涨跌幅']:.2f}%</font>"""
         , axis=1)
-    # markdown_df = stocks_df.apply(
-    #     lambda x: f'[{x[0]} {x[1]} {x[2]:.0f}](https://www.iwencai.com/unifiedwap/result?w={x[0]}&querytype=stock)  {x[3]:.2f}'
-    #     + f'\n  {x[4]:.2f} {x[5]:.2f}%'
-    #     # + f'\n <font color="warning">{x[4]:.2f} {x[5]:.2f}%</font>'
-    #     + f' {x[6]:.2f} {x[7]:.2f}%'
-    #     , axis=1)
     markdown_df = markdown_df.astype(str)
     stocks_list = markdown_df.tolist()
     return f"\n* 情绪指数(0~1)越大，出票越多\n  {ganzhou_index_title}\n\n\n{title}\n"+"\n".join(stocks_list)
@@ -185,18 +178,18 @@ def get_today_ohlc(symbol):
     df['前天涨跌幅'] = df['涨跌幅'].shift(2)
     df['前天换手率'] = df['换手率'].shift(2)
     
-    df['5日均价'] = df['收盘'].rolling(window=5).mean().fillna(method='ffill')    
-    df['10日均价'] = df['收盘'].rolling(window=10).mean().fillna(method='ffill')    
+    df['5日均价'] = df['收盘'].rolling(window=5).mean().ffill()    
+    df['10日均价'] = df['收盘'].rolling(window=10).mean().ffill()    
     df['5日均价'] = df['5日均价'].round(2)      
     df['10日均价'] = df['10日均价'].round(2)      
       
-    df['5日均量'] = df['成交量'].rolling(window=5).mean().fillna(method='ffill')    
-    df['10日均量'] = df['成交量'].rolling(window=10).mean().fillna(method='ffill')    
+    df['5日均量'] = df['成交量'].rolling(window=5).mean().ffill()    
+    df['10日均量'] = df['成交量'].rolling(window=10).mean().ffill()    
     df['5日均量'] = df['5日均量'].round(0)      
     df['10日均量'] = df['10日均量'].round(0)      
      
-    df['5日均换'] = df['换手率'].rolling(window=5).mean().fillna(method='ffill')    
-    df['10日均换'] = df['换手率'].rolling(window=10).mean().fillna(method='ffill')    
+    df['5日均换'] = df['换手率'].rolling(window=5).mean().ffill()    
+    df['10日均换'] = df['换手率'].rolling(window=10).mean().ffill()    
     df['5日均换'] = df['5日均换'].round(2)      
     df['10日均换'] = df['10日均换'].round(2)      
  
@@ -250,8 +243,8 @@ def get_top_30_deal_volume_stocks(pbar=None,dev=False):
               subset=['总市值大于800亿'])  
                   
           df['60日涨跌幅大于0'] = df['60日涨跌幅'].astype(float) > 0
-          df = df.where(df['60日涨跌幅大于0'], np.nan).dropna(
-              subset=['60日涨跌幅大于0'])          
+        #   df = df.where(df['60日涨跌幅大于0'], np.nan).dropna(
+        #       subset=['60日涨跌幅大于0'])          
 
           df['最大可能涨幅'] = df['股票代码'].apply(lambda code: 20 if str(code).startswith('3') else 10) 
           
@@ -286,7 +279,7 @@ def get_top_30_deal_volume_stocks(pbar=None,dev=False):
           df['volume32'] = df['trading_detail_before'].map(lambda x: x[-2])
           df['price32'] = df['trading_detail_before'].map(lambda x: x[-1])
           # 进一步刷选出持续强势的票
-          df = df.where(df['开盘2分钟涨幅'] < 0.8 * df['最新涨跌幅']).dropna()   
+          df = df.where(df['开盘2分钟涨幅'] < 0.6 * df['最新涨跌幅']).dropna()   
           df = df.where(df['cmf'] > 0 ).dropna()   
           
           df.rename(columns={f"""个股热度排名[{datetime.now().strftime('%Y%m%d')}]""": '热度排名'},inplace = True)      

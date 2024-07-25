@@ -11,7 +11,6 @@ class IndicatorTradingFilter(StockFilter):
             '>=': lambda x, y: x >= y,
             '<': lambda x, y: x < y,
             '==': lambda x, y: x == y,
-            '>': lambda x, y: x >= y,
             '<=': lambda x, y: x <= y,
         }
         # 确保提供的比较运算符是有效的

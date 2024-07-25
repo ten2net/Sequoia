@@ -143,10 +143,14 @@ def get_stock_data(stock_code):
 
     # 获取总市值和行业
     stock_info = ak.stock_individual_info_em(symbol=stock_code)
-    print(stock_info.iloc[0])
-    total_mv = stock_info.iloc[0]['value'] / (10000 * 10000)  # 总市值
-    industry = stock_info.iloc[2]['value']  # 行业
-    stock_name = stock_info.iloc[5]['value']  # 股票简称
+    # print(">>>>>>>>>>>>>>>",stock_info[stock_info['item'] == "总市值"].iloc[-1]['value'], stock_info.loc[stock_info['item'] == "总市值", 'value'].iloc[-1])
+    # print(stock_info.iloc[0])
+    total_mv = stock_info.loc[stock_info['item'] == "总市值", 'value'].iloc[-1] / (10000 * 10000)  # 总市值
+    industry = stock_info.loc[stock_info['item'] == "行业", 'value'].iloc[-1] 
+    stock_name = stock_info.loc[stock_info['item'] == "股票简称", 'value'].iloc[-1] 
+    # total_mv = stock_info.iloc[0]['value'] / (10000 * 10000)  # 总市值
+    # industry = stock_info.iloc[2]['value']  # 行业
+    # stock_name = stock_info.iloc[5]['value']  # 股票简称
 
     # item          value
     # 0   总市值  55740263855.5
@@ -192,11 +196,12 @@ def build_markdown_msg(stocks_df,ganzhou_index):
     last_ganzhou_index = ganzhou_index
     ganzhou_index_title =f'情绪指数：{ganzhou_index} {ganzhou_index_direct}'
     title = "代码 简称 \n 昨收 昨天涨幅\n 今开 开盘涨幅\n 最新价 最新涨幅"   
-    stocks_df['markdown'] = stocks_df[['code', 'close_price', 'open_price', '涨幅', 'name','today_close','today_pct','last_pct']].apply(
-        lambda x: f"""[{x[0]} {x[4]}](https://www.iwencai.com/unifiedwap/result?w={x[0]}&querytype=stock)"""
-        + f"\n {x[1]:.2f}  {x[7]:.2f}%"
-        + '\n <font color="info">' + f"{x[2]:.2f}  {x[3]:.2f}%" + '</font>'
-        + '\n <font color="warning">' + f"{x[5]:.2f}  {x[6]:.2f}%" + '</font>', axis=1)
+    stocks_df['markdown'] = stocks_df.apply(
+        lambda x: f"""[{x['code']} {x['name']}](https://www.iwencai.com/unifiedwap/result?w={x['code']}&querytype=stock)"""
+        + f"\n {x['close_price']:.2f}  {x['last_pct']:.2f}%"
+        + '\n <font color="info">' + f"{x['open_price']:.2f}  {x['涨幅']:.2f}%" + '</font>'
+        + '\n <font color="warning">' + f"{x['today_close']:.2f}  {x['today_pct']:.2f}%" + '</font>',
+        axis=1)
 
     # stocks_df['markdown'] = stocks_df['markdown'] #.astype(str)
     stocks_list = stocks_df['markdown'].tolist()

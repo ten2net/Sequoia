@@ -8,6 +8,7 @@ import argparse
 import threading
 
 from radar.cci_88 import CCIStockRadar
+from radar.ta_kline_style import KLineStyleStockRadar
 
 def next_exec_seconds(hour=9, minute=26):
     now = datetime.now()
@@ -33,7 +34,7 @@ def start_financial_radar_system():
     """    
     stock_radares = [
         CCIStockRadar(name="斐纳斯强势300", cci_threshold=300),
-        CCIStockRadar(name="斐纳斯强势250", cci_threshold=250),
+        KLineStyleStockRadar(name="K线异常", threshold=0, topN =30),
     ]
     threads = []
     for radar in stock_radares:

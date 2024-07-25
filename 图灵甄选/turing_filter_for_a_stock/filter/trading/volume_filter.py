@@ -4,13 +4,13 @@ import pandas as pd
 
 
 class HighVolumeFilter(StockFilter):
-    def __init__(self, times_threshold: float = 1.5):
+    def __init__(self, threshold: float = 1.5):
         """
         两市剔除上个交易日显著放量的股票
         Args:
             times_threshold 上个交易日的成交量与5日均量的倍数        
         """
-        self.times_threshold = times_threshold
+        self.times_threshold = threshold
 
     def filter(self, df: pd.DataFrame) -> pd.DataFrame:      
         return df[(df['volume_yestday'] / df['volume_5']) < self.times_threshold]

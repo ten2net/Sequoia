@@ -1,4 +1,4 @@
-klineStyle = [
+KLineStyles = [
     {"name": "2crows", "CDL": "CDL_2CROWS", "name_zh": "两只乌鸦"},
     {"name": "3blackcrows", "CDL": "CDL_3BLACKCROWS", "name_zh": "三只乌鸦"},
     {"name": "3inside", "CDL": "CDL_3INSIDE", "name_zh": "三个内部向上/向下"},
@@ -61,3 +61,11 @@ klineStyle = [
     {"name": "upsidegap2crows", "CDL": "CDL_UPSIDEGAP2CROWS", "name_zh": "向上跳空的两只乌鸦"},
     {"name": "xsidegap3methods", "CDL": "CDL_XSIDEGAP3METHODS", "name_zh": "上升/下降跳空三法"}
 ]
+
+KLineStyles_names =[style['name'] for style in KLineStyles]
+KLineStyles_cdls =[style['CDL'] for style in KLineStyles]
+KLineStyles_names_zh =[style['name_zh'] for style in KLineStyles]
+
+def add_cdl_pattern(df):
+    df.ta.cdl_pattern(name=KLineStyles_names, append=True)
+    df.rename(columns={"CDL_DOJI_10_0.1":"CDL_DOJI"},inplace=True)

@@ -31,10 +31,11 @@ class WeComNotification:
     def build_markdown_msg(self, stocks_df, ganzhou_index):
         ganzhou_index_title = f'情绪指数：{ganzhou_index}'
         title = "代码 简称 \n 昨收 昨天涨幅\n 最新 最新涨幅"
-        stocks_df['markdown'] = stocks_df[['code','name', 'close_yestday', 'pct_yestday','close', 'pct']].apply(
-            lambda x: f"""[{x[0]} {x[1]}](https://www.iwencai.com/unifiedwap/result?w={x[0]}&querytype=stock)"""
-             + '\n <font color="info">' + f"{x[2]:.2f}  {x[3]:.2f}%" + '</font>'
-            + '\n <font color="warning">' + f"{x[4]:.2f}  {x[5]:.2f}%" + '</font>', axis=1)
+        stocks_df['markdown'] = stocks_df.apply(
+            lambda x: f"""[{x['code']} {x['name']}](https://www.iwencai.com/unifiedwap/result?w={x['code']}&querytype=stock)"""
+            + '\n <font color="info">' + f"{x['close_yestday']:.2f}  {x['pct_yestday']:.2f}%" + '</font>'
+            + '\n <font color="warning">' + f"{x['close']:.2f}  {x['pct']:.2f}%" + '</font>',
+            axis=1)        
 
         stocks_list = stocks_df['markdown'].tolist()
 

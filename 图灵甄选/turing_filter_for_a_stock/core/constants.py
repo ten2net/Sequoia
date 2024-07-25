@@ -1,5 +1,5 @@
 class Constants:
-    BAR_DAY_COLUMNS = ["date", "open", "close", "high",
+    BAR_DAY_COLUMNS = ["date","open", "close", "high",
                        "low", "volume", "amount", "amp", "pct", "turnover"]
     BAR_MINUTE_COLUMNS = ["date", "open", "close", "high",
                           "low", "volume", "amount", "amplitude", "pct", "turnover"]
