@@ -1,5 +1,6 @@
 
 from typing import List
+import pandas as pd
 from pool.base import StockPool
 from favor.favor import StockFavorManagement
 from collector.akshare_data_collector import AkshareDataCollector
@@ -50,4 +51,44 @@ class FavorStockPool(StockPool):
     # df[df['symbol'].isin(symbols)]    
     return symbols
 
+class LargeBuyStockPool(StockPool):
+  def __init__(self):
+    self.adc = AkshareDataCollector()
+  def get_symbols(self,k:int=100):
+    """
+    获取大笔买入股票列表
     
+    Args:
+        k (int, optional): 返回的股票数量，默认为100。
+    
+    Returns:
+        list: 包含股票符号的列表。
+    
+    """
+    df1 = self.adc.get_large_buy_event()
+    df2 = self.adc.get_rapit_rise_event()
+    df = pd.concat([df1, df2], axis=0, ignore_index=True)
+    df.sort_values(by='diff', ascending=False, inplace=True)
+    # df = df.head(k).copy()
+    symbols = list(set(df['code'].tolist()))
+    return symbols   
+    
+class HotRankStockPool(StockPool):
+  def __init__(self):
+    self.adc = AkshareDataCollector()
+  def get_symbols(self,k:int=100):
+    """
+    获取热度排名靠前的股票列表
+    
+    Args:
+        k (int, optional): 返回的股票数量，默认为100。
+    
+    Returns:
+        list: 包含股票符号的列表。
+    
+    """
+    df = self.adc.get_stock_hot_rank()
+    df.sort_values(by='rank', ascending=True, inplace=True)
+    df = df.head(k).copy()
+    symbols = df['code'].tolist()
+    return symbols     

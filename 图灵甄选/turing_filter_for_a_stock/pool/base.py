@@ -4,6 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from kline.kline_style import add_cdl_pattern
+import warnings
 
 class StockPool(ABC):
     @abstractmethod
@@ -54,6 +55,7 @@ class StockPool(ABC):
             DataFrame的列包括原始数据和symbol列，其中symbol列用于标识每行数据对应的symbol。
         
         """
+        warnings.filterwarnings('ignore')
         pbar = tqdm(range(len(symbols)), desc=f'正在获取最新行情数据进行因子计算...',
                     bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed} < {remaining}, {rate_fmt}]', colour='yellow')    
         # 初始化一个空列表来存储最后一行的数据
@@ -71,6 +73,6 @@ class StockPool(ABC):
             pbar.update(1)
         
         # 使用pd.concat合并最后一行的DataFrame列表
-        df_last_rows = pd.concat(last_rows_data)
+        df_last_rows = pd.concat(last_rows_data, ignore_index=True)
         return df_last_rows
     

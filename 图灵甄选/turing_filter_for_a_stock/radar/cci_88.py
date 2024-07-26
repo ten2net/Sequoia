@@ -5,7 +5,7 @@ from filter.fund.fund_filter import NameFilter, SymbolFilter, TotalCapitalFilter
 from notification.wecom import WeComNotification
 from radar.base import StockRadar
 from favor.favor import StockFavorManagement
-from pool.pool import AmountStockPool, FavorStockPool
+from pool.pool import AmountStockPool, FavorStockPool, HotRankStockPool
 from filter.trading.indictor_trading_filter import IndicatorTradingFilter
 import os
 from termcolor import colored
@@ -22,7 +22,10 @@ class CCIStockRadar(StockRadar):
         # 2、准备主股票池和其他附加股票池
         mainStockPool = FavorStockPool(
             groups=["自选股", "无雷"])  # 采集自选股中的股票信息作为股票池        
-        stockPools = [mainStockPool,AmountStockPool()]  # 采集其他股票池中的股票信息作为附加股票池
+        stockPools = [mainStockPool,
+                      AmountStockPool(),
+                      HotRankStockPool(), # 热榜股票池 
+                      ]  # 采集其他股票池中的股票信息作为附加股票池
         symbols = []
         for stockPool in stockPools:
             symbols += stockPool.get_symbols()
@@ -63,7 +66,9 @@ class CCIStockRadar(StockRadar):
             print(colored(f"""{self.name}发现了 {df.shape[0]} 个目标：{df['name'].tolist()}""","green"))
             # 9、更新自选股            
             sfm = StockFavorManagement()
-            sfm.add_to_group(df['code'].tolist(), group_name=self.name)
+            results =df['code'].tolist()
+            results =  results[::-1]  #确保新加自选的在上面
+            sfm.add_to_group(results, group_name=self.name)             
             
             # 10、发送消息通知            
             wecom_msg_enabled= os.environ.get('WECOM_MSG_ENABLED').lower() == 'true'
