@@ -131,8 +131,66 @@ def list_entities(group_name=None, group_id=None, session: Session = None):
     _, result = parse_resp(resp)
     datas = result["stkinfolist"]
     return [data["security"].split("$")[1] for data in datas]
+def del_from_group(
+        code, entity_type="stock", group_name=None, group_id=None, session: Session = None
+):
+    if not group_id:
+        assert group_name is not None
+        group_id = get_group_id(group_name, session=session)
+        if not group_id:
+            raise Exception(f"could not find group:{group_name}")
+    code = to_eastmoney_code(code, entity_type=entity_type)
+    ts = current_timestamp()
+    url = f"http://myfavor.eastmoney.com/v4/webouter/ds?appkey={APIKEY}&cb=jQuery112404771026622113468_{ts - 10}&g={group_id}&sc={code}&_={ts}"
+
+    if session:
+        resp = session.get(url, headers=HEADER)
+    else:
+        resp = requests.get(url, headers=HEADER)
+
+    return parse_resp(resp)
+def del_symbols_from_group(
+        codes, entity_type="stock", group_name=None, group_id=None, session: Session = None
+):
+    if not group_id:
+        assert group_name is not None
+        group_id = get_group_id(group_name, session=session)
+        if not group_id:
+            raise Exception(f"could not find group:{group_name}")
+    codeList = [to_eastmoney_code(code, entity_type=entity_type) for code in codes]
+    codeList = ",".join(codeList)
+    print(codeList)
+    ts = current_timestamp()
+    url = f"http://myfavor.eastmoney.com/v4/webouter/dslot?appkey={APIKEY}&cb=jQuery112404771026622113468_{ts - 10}&g={group_id}&scs={codeList}&_={ts}"
+
+    if session:
+        resp = session.get(url, headers=HEADER)
+    else:
+        resp = requests.get(url, headers=HEADER)
+
+    return parse_resp(resp)
+def del_all_from_group(entity_type="stock", group_name=None, group_id=None, session: Session = None):
+    if not group_id:
+        assert group_name is not None
+        group_id = get_group_id(group_name, session=session)
+        if not group_id:
+            raise Exception(f"could not find group:{group_name}")
+    codes = list_entities(group_name, session=session)
+    codeList = [to_eastmoney_code(code, entity_type=entity_type) for code in codes]
+    codeList = ",".join(codeList)
+    print(codeList)
+    ts = current_timestamp()
+    url = f"http://myfavor.eastmoney.com/v4/webouter/dslot?appkey={APIKEY}&cb=jQuery112404771026622113468_{ts - 10}&g={group_id}&scs={codeList}&_={ts}"
+
+    if session:
+        resp = session.get(url, headers=HEADER)
+    else:
+        resp = requests.get(url, headers=HEADER)
+
+    return parse_resp(resp)
 
 
+    return parse_resp(resp)
 def add_to_group(
         code, entity_type="stock", group_name=None, group_id=None, session: Session = None
 ):
@@ -177,10 +235,15 @@ def update_em_favor_list(symbol_list:list[str],group_full_name:str ,group_new_na
     if not group_id_new: 
         create_group(group_new_name,session)
     else:
-        del_group(group_new_name, group_id_new ,session)
-        create_group(group_new_name,session)
+        # 删除上一榜出票
+        stocks = list_entities(group_name=group_new_name, session=session)
+        del_all_from_group( group_name=group_new_name, entity_type="stock")
+        # for symbol in stocks:            
+            # del_from_group(symbol, group_name=group_new_name, entity_type="stock")
+    #     del _group(group_new_name, group_id_new ,session)
+    #     create_group(group_new_name,session)
     
-    # 图灵甄选中包含全部的出票
+    # 图灵甄选全榜中包含全部的出票
     group_id_today = get_group_id(group_full_name,session)
     if not group_id_today:          
         create_group(group_full_name,session) 
