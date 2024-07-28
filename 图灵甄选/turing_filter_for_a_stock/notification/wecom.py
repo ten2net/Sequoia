@@ -1,10 +1,11 @@
+from typing import List
 import requests
 import datetime
 import os
 import json
 import pandas as pd
 
-
+ganzhou_index_list:List[float]=[]
 class WeCom:
     def __init__(self, webhook_url):
         self.webhook_url = webhook_url
@@ -29,7 +30,10 @@ class WeComNotification:
         self.wecom_group_bot_keys = [item['key'] for item in config]
 
     def build_markdown_msg(self, stocks_df, ganzhou_index):
-        ganzhou_index_title = f'情绪指数：{ganzhou_index}'
+        global ganzhou_index_list
+        ganzhou_index_list.append(ganzhou_index)
+        ganzhou_index_list = ganzhou_index_list[-3:]
+        ganzhou_index_title = "情绪指数：" + "➡️".join(str(num) for num in ganzhou_index_list)
         title = "代码 简称 \n 昨收 昨天涨幅\n 最新 最新涨幅"
         stocks_df['markdown'] = stocks_df.apply(
             lambda x: f"""[{x['code']} {x['name']}](https://www.iwencai.com/unifiedwap/result?w={x['code']}&querytype=stock)"""
@@ -39,7 +43,7 @@ class WeComNotification:
 
         stocks_list = stocks_df['markdown'].tolist()
 
-        return f"\n* 情绪指数(-1~1),可用来设置仓位比例\n  {ganzhou_index_title}\n\n\n{title}\n"+"\n".join(stocks_list)
+        return f"\n* 情绪指数(-1 ~ 1),可用来调整仓位比例\n  {ganzhou_index_title}\n\n\n{title}\n"+"\n".join(stocks_list)
 
     def send(self, title: str, message: str):
         for key in self.wecom_group_bot_keys:
