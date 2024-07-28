@@ -41,6 +41,8 @@ class LargeBuyStockRadar(StockRadar):
         # 4、获取股票数据，并附加其他指标
         df = mainStockPool.get_data_with_indictores(symbols,withCDL=False)
         df = df.merge(market_spot_df, on="code", how="left")
+        
+        
         # 5、附加其他指标
         # 6、筛选股票，实现单独的过滤器，添加到过滤器链中即可
         filters = [
@@ -70,4 +72,5 @@ class LargeBuyStockRadar(StockRadar):
             df = df.head(self.topN)          
             wecom_msg_enabled= os.environ.get('WECOM_MSG_ENABLED').lower() == 'true'
             if wecom_msg_enabled:
-                WeComNotification().send_stock_df(title=self.name, df=df, ganzhou_index=0.1)
+                ganzhou_index =self.compute_market_sentiment_index()
+                WeComNotification().send_stock_df(title=self.name, df=df, ganzhou_index=ganzhou_index)

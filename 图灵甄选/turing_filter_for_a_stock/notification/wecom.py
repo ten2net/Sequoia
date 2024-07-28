@@ -39,7 +39,7 @@ class WeComNotification:
 
         stocks_list = stocks_df['markdown'].tolist()
 
-        return f"\n* 情绪指数(0~1)越大，出票越多\n  {ganzhou_index_title}\n\n\n{title}\n"+"\n".join(stocks_list)
+        return f"\n* 情绪指数(-1~1),可用来设置仓位比例\n  {ganzhou_index_title}\n\n\n{title}\n"+"\n".join(stocks_list)
 
     def send(self, title: str, message: str):
         for key in self.wecom_group_bot_keys:
