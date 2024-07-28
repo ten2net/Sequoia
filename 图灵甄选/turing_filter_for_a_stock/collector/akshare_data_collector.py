@@ -103,7 +103,6 @@ class AkshareDataCollector(DataCollector):
         df = df.query('diff > 0.05 and (volume / 500000) > 1 and price > 3 ') 
         # df.drop(columns=['volume'], inplace=True)      
         return df
-
     def get_data(self, symbol: str, start_date: str = None, end_date: str = None, adjust: str = "") -> pd.DataFrame:
         df = self.__fetch_data__(symbol, start_date, end_date)
         df = df.drop(['股票代码'], axis=1)
@@ -153,7 +152,6 @@ class AkshareDataCollector(DataCollector):
         df.drop(columns=['涨速'], inplace=True)
         df.columns = list(Constants.SPOT_EM_COLUMNS)
         return df
-        
 
     def fetch_intraday_data(self, symbol, start_time, end_time):
         # Akshare may not support intraday data fetching directly
