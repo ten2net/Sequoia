@@ -149,6 +149,24 @@ def del_from_group(
         resp = requests.get(url, headers=HEADER)
 
     return parse_resp(resp)
+def add_symbols_to_group(
+        codes, entity_type="stock", group_name=None, group_id=None, session: Session = None
+):
+    if not group_id:
+        assert group_name is not None
+        group_id = get_group_id(group_name, session=session)
+        if not group_id:
+            raise Exception(f"could not find group:{group_name}")
+    codeList = [to_eastmoney_code(code, entity_type=entity_type) for code in codes]
+    codeList = ",".join(codeList)
+    # print(codeList)
+    ts = current_timestamp()
+    url = f"http://myfavor.eastmoney.com/v4/webouter/aslot?appkey={APIKEY}&cb=jQuery112404771026622113468_{ts - 10}&g={group_id}&scs={codeList}&_={ts}"
+
+    if session:
+        resp = session.get(url, headers=HEADER)
+    else:
+        resp = requests.get(url, headers=HEADER)
 def del_symbols_from_group(
         codes, entity_type="stock", group_name=None, group_id=None, session: Session = None
 ):
@@ -159,7 +177,7 @@ def del_symbols_from_group(
             raise Exception(f"could not find group:{group_name}")
     codeList = [to_eastmoney_code(code, entity_type=entity_type) for code in codes]
     codeList = ",".join(codeList)
-    print(codeList)
+    # print(codeList)
     ts = current_timestamp()
     url = f"http://myfavor.eastmoney.com/v4/webouter/dslot?appkey={APIKEY}&cb=jQuery112404771026622113468_{ts - 10}&g={group_id}&scs={codeList}&_={ts}"
 
@@ -178,7 +196,7 @@ def del_all_from_group(entity_type="stock", group_name=None, group_id=None, sess
     codes = list_entities(group_name, session=session)
     codeList = [to_eastmoney_code(code, entity_type=entity_type) for code in codes]
     codeList = ",".join(codeList)
-    print(codeList)
+    # print(codeList)
     ts = current_timestamp()
     url = f"http://myfavor.eastmoney.com/v4/webouter/dslot?appkey={APIKEY}&cb=jQuery112404771026622113468_{ts - 10}&g={group_id}&scs={codeList}&_={ts}"
 
@@ -238,19 +256,15 @@ def update_em_favor_list(symbol_list:list[str],group_full_name:str ,group_new_na
         # 删除上一榜出票
         stocks = list_entities(group_name=group_new_name, session=session)
         del_all_from_group( group_name=group_new_name, entity_type="stock")
-        # for symbol in stocks:            
-            # del_from_group(symbol, group_name=group_new_name, entity_type="stock")
-    #     del _group(group_new_name, group_id_new ,session)
-    #     create_group(group_new_name,session)
     
     # 图灵甄选全榜中包含全部的出票
     group_id_today = get_group_id(group_full_name,session)
     if not group_id_today:          
         create_group(group_full_name,session) 
-    # 添加自选         
-    for symbol in symbol_list:
-        add_to_group(symbol, group_name=group_new_name, entity_type="stock")
-        add_to_group(symbol, group_name=group_full_name, entity_type="stock")  
+    # 添加自选 
+    group_name_list = [group_new_name,group_full_name] 
+    for group_name in group_name_list:       
+        add_symbols_to_group(symbol_list, group_name=group_name, entity_type="stock")
 
 __all__ = [
     "create_group",
