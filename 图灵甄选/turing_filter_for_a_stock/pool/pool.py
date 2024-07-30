@@ -67,6 +67,27 @@ class FavorStockPool(StockPool):
     # df[df['symbol'].isin(symbols)]    
     return symbols
 
+class JingJiaRiseStockPool(StockPool):
+  def __init__(self):
+    self.adc = AkshareDataCollector()
+  def get_symbols(self,k:int=100):
+    """
+    获取竞价上涨股票列表
+    
+    Args:
+        k (int, optional): 返回的股票数量，默认为100。
+    
+    Returns:
+        list: 包含股票符号的列表。
+    
+    """
+    df = self.adc.get_jingjia_rise_event()
+    print(df)
+    df.sort_values(by='diff', ascending=False, inplace=True)
+    print(df)
+    symbols = df['code'].tolist()
+    return symbols   
+  
 class LargeBuyStockPool(StockPool):
   def __init__(self):
     self.adc = AkshareDataCollector()
@@ -85,7 +106,6 @@ class LargeBuyStockPool(StockPool):
     df2 = self.adc.get_rapit_rise_event()
     df = pd.concat([df1, df2], axis=0, ignore_index=True)
     df.sort_values(by='diff', ascending=False, inplace=True)
-    # df = df.head(k).copy()
     symbols = list(set(df['code'].tolist()))
     return symbols   
     

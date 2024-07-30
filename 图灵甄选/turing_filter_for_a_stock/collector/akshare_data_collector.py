@@ -60,15 +60,13 @@ class AkshareDataCollector(DataCollector):
             ~(df['name'].apply(str).str.startswith('C'))       
             ]
         return df
-    def get_rapit_rise_event(self)->pd.DataFrame:
+    def get_jingjia_rise_event(self)->pd.DataFrame:
         """
         获取特定事件（如快速反弹）的股票变动数据。        
         Returns:
             pd.DataFrame: 返回一个pandas DataFrame对象，包含了指定事件的股票变动数据。
         """
-        df1 = self.__fetch_stock_changes_em__(symbol="快速反弹") 
-        df2 = self.__fetch_stock_changes_em__(symbol="火箭发射") 
-        df = pd.concat([df1, df2], axis=0, ignore_index=True)
+        df = self.__fetch_stock_changes_em__(symbol="竞价上涨") 
         df=df[["时间","代码","名称","相关信息"]]
         df.rename(columns={"时间":"time","代码":"code","名称":"name","相关信息":"info"},inplace=True)
         df =df[~(df['code'].apply(str).str.startswith('8')) & 
@@ -80,7 +78,28 @@ class AkshareDataCollector(DataCollector):
             ]
         df[['volume','price','diff']] =df['info'].astype(str).str.split(",",expand=True).astype(float)
         df['diff']=df['diff'].astype(float).abs()
-        df = df.query('price > 3 ')       
+        df = df.query('diff > 0.02 and price > 3 ')  
+        # df.drop(columns=['volume'], inplace=True)
+        return df
+    def get_rapit_rise_event(self)->pd.DataFrame:
+        """
+        获取特定事件（如快速反弹）的股票变动数据。        
+        Returns:
+            pd.DataFrame: 返回一个pandas DataFrame对象，包含了指定事件的股票变动数据。
+        """
+        df = self.__fetch_stock_changes_em__(symbol="火箭发射") 
+        df=df[["时间","代码","名称","相关信息"]]
+        df.rename(columns={"时间":"time","代码":"code","名称":"name","相关信息":"info"},inplace=True)
+        df =df[~(df['code'].apply(str).str.startswith('8')) & 
+            ~(df['code'].apply(str).str.startswith('4')) &
+            ~(df['name'].apply(str).str.startswith('ST')) & 
+            ~(df['name'].apply(str).str.startswith('*'))  & 
+            ~(df['name'].apply(str).str.startswith('N')) & 
+            ~(df['name'].apply(str).str.startswith('C'))       
+            ]
+        df[['volume','price','diff']] =df['info'].astype(str).str.split(",",expand=True).astype(float)
+        df['diff']=df['diff'].astype(float).abs()
+        df = df.query('diff > 0.02 and price > 3 ')       
         # df.drop(columns=['volume'], inplace=True)
         return df
     def get_large_buy_event(self)->pd.DataFrame:
@@ -100,7 +119,7 @@ class AkshareDataCollector(DataCollector):
             ~(df['name'].apply(str).str.startswith('C'))       
             ]
         df[['volume','price','diff']] =df['info'].astype(str).str.split(",",expand=True).astype(float)
-        df = df.query('diff > 0.05 and (volume / 500000) > 1 and price > 3 ') 
+        df = df.query('diff > 0.02 and (volume / 500000) > 1 and price > 3 ') 
         # df.drop(columns=['volume'], inplace=True)      
         return df
     def get_data(self, symbol: str, start_date: str = None, end_date: str = None, adjust: str = "") -> pd.DataFrame:

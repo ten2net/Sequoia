@@ -21,8 +21,6 @@ class StockPool(ABC):
             pd.DataFrame: 包含最新数据的DataFrame，每列对应一个symbol的最新数据。
         
         """
-        # data = [self.adc.get_data(symbol).iloc[-1] for symbol in symbols]
-        # df = pd.DataFrame(data)
          
         pbar = tqdm(range(len(symbols)), desc=f'正在获取最新行情数据进行因子计算...',
                     bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed} < {remaining}, {rate_fmt}]', colour='yellow')    

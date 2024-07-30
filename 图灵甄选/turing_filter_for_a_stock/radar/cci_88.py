@@ -47,7 +47,7 @@ class CCIStockRadar(StockRadar):
         filters = [
             IndicatorTradingFilter(
                 indicator_name="cci_88", threshold=self.threshold, comparison_operator=">="),
-            IndicatorTradingFilter(indicator_name="close_to_sma5_pct", threshold=0.05, comparison_operator="<")
+            # IndicatorTradingFilter(indicator_name="close_to_sma5_pct", threshold=0.05, comparison_operator="<")
         ]
         filter_chain = FilterChain(filters)
         df = filter_chain.apply(df)
