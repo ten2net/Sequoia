@@ -94,7 +94,7 @@ class LargeBuyStockRadar(StockRadar):
                     elif 0.03 < row['pct_hold'] <= 0.1 and row['pct'] < 10  :   # 浮盈3%以上但没有涨停，卖出一半仓位
                         print(sfm.sell(symbol=row['code'], price=row['close'], stock_num=round(row['quantity_can_use'] / 2 , 0))) 
                         selled.append(row['code'])
-                    elif 0.1 < row['pct_hold'] <= 0.3 and row['pct'] < 0.98  :   # 浮盈10%以上但没有涨停，卖空
+                    elif 0.1 < row['pct_hold'] <= 0.3 and row['pct'] < 10  :   # 浮盈10%以上但没有涨停，卖空
                         print(sfm.sell(symbol=row['code'], price=row['close'], stock_num=row['quantity_can_use'])) 
                         selled.append(row['code'])
                     elif row['pct'] > 5  :   # 已持仓的股票当前涨幅5%以上的不再补仓
@@ -110,7 +110,8 @@ class LargeBuyStockRadar(StockRadar):
                 df_buy = df[~df['code'].isin(selled)]  # 过滤掉已经卖出的股票            
                 df_buy = df[~df['code'].isin(not_needed_add_position)]  # 过滤掉不需要补仓的股票            
 
-                position_ratio = ganzhou_index  # 用当前情绪来控制仓位比例
+                position_ratio = ganzhou_index  # 仓位比例，情绪越差，仓位比例越低，情绪越好，仓位比例越高          
+                
                 price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
                 
                 stock_prices={row['code']:round(row['close'] * price_rate,2)  for index, row in df_buy.iterrows()} # 股票价格
