@@ -9,6 +9,6 @@ stock_radares = [
     # DelTest(name="斐纳斯强势300", cci_threshold=250),
     # CCIStockRadar(name="斐纳斯强势300", cci_threshold=250),
     # KLineStyleStockRadar(name="K线异常", threshold=0, topN =200),
-    CCIStockRadar(name="斐纳斯强势300", cci_threshold=300),
+    # CCIStockRadar(name="斐纳斯强势300", cci_threshold=300),
     LargeBuyStockRadar(name="大笔买入", topN =22),
 ]
