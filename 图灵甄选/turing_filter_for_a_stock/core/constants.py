@@ -35,5 +35,7 @@ class Constants:
         "total_capital",
         "circulating_capital",
         "60_day_pct",
-        "ytd_pct"
+        "ytd_pct",
+        "upper_limit",
+        "lower_limit"
     ]
