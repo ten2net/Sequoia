@@ -229,11 +229,11 @@ def add_to_group(
 
     return parse_resp(resp)
 def buy(code:str, price:float,stock_num:int)->str:
-    return commit_buy_or_sell_order(code, price,stock_num,'buy')
+    return commit_buy_or_sell_order(code, price,stock_num,'buy',order_type ="spo_order_limit")
 def sell(code:str, price:float,stock_num:int)->str:
-    return commit_buy_or_sell_order(code, price,stock_num,'sell')
-def commit_buy_or_sell_order(code:str, price:float,stock_num:int,buy_or_sell:Literal['buy', 'sell'] = 'buy')->str:
-    order_type="spo_order"
+    return commit_buy_or_sell_order(code, price,stock_num,'sell',order_type ="spo_order_limit")
+def commit_buy_or_sell_order(code:str, price:float,stock_num:int,buy_or_sell:Literal['buy', 'sell'] = 'buy',order_type:Literal['spo_order', 'spo_order_limit'] = "spo_order")->str:
+    # order_type="spo_order"
     # type: spo_zuhe_preview
     # type: spo_bal_info  #账户信息
     # type: spo_zuhe_detail_basic #组合基本信息
@@ -535,7 +535,7 @@ if __name__ == "__main__":
     # resp =buy(code = "000001",price = 10.35, stock_num=500 )
     # print(resp ,type(resp), resp.text )
     
-    print(get_position())
+    # print(get_position())
     # 
     # hangup_order =get_can_cancel_order()
     # for item in hangup_order:
@@ -544,4 +544,5 @@ if __name__ == "__main__":
     
     # print(get_balance_info())
 
+    print(commit_buy_or_sell_order(code = "603270",price = 19.40, stock_num=300,order_type ="spo_order_limit" ) )
     # print(buy(code = "603270",price = 19.40, stock_num=300 ) )
