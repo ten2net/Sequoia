@@ -1,4 +1,5 @@
 from datetime import datetime
+import math
 from typing import List
 from core.constants import Constants
 from collector.akshare_data_collector import AkshareDataCollector
@@ -24,7 +25,7 @@ class LargeBuyStockRadar(StockRadar):
     def startup(self):
         # 1 准备市场行情快照，获取股票代码、名称、总市值、PE、PB等指标，用于筛选股票
         market_spot_df = AkshareDataCollector().get_stock_zh_a_spot_em()
-        market_spot_df_all = market_spot_df[Constants.SPOT_EM_COLUMNS] 
+        market_spot_df_all = market_spot_df
         market_spot_df = market_spot_df[Constants.SPOT_EM_COLUMNS_BASE] 
         # 2、准备主股票池和其他附加股票池
         mainStockPool = LargeBuyStockPool()        
@@ -82,20 +83,25 @@ class LargeBuyStockRadar(StockRadar):
                 df_hold['quantity'] = df_hold['quantity'].astype(int)
                 df_hold['quantity_can_use'] = df_hold['quantity_can_use'].astype(int)
                 df_hold['purchase_price'] = df_hold['purchase_price'].astype(float)
+                
                 df_host_current = df_hold.merge(market_spot_df_all, on="code", how="left")
                 # 计算持仓浮盈
                 df_host_current['pct_hold'] = (df_host_current['close'] - df_host_current['purchase_price']) / df_host_current['purchase_price']
                 df_can_sell = df_host_current[df_host_current['quantity_can_use'] > 0]  # 过滤掉不能卖出的股票，避免废单
-                # print(df_can_sell[[ 'code', 'name_x','pct_hold','pct','quantity_can_use']])
+
                 for index, row in df_can_sell.iterrows():
-                    if row['pct_hold'] < -0.01 :   # 浮亏1%以上，卖空
-                        print(sfm.sell(symbol=row['code'], price=row['close'], stock_num=row['quantity_can_use']))
+                    quantity_can_use = row['quantity_can_use']
+                    sell_price = max(round(row['close'] * 0.995 , 2) ,row["lower_limit"])  # 确保尽量能出手
+                    if row['close'] <= row['open'] and row['pct_hold'] < -0.01 :   # 浮亏1%以上，卖空
+                        print(sfm.sell(symbol=row['code'], price=sell_price, stock_num=quantity_can_use))
                         selled.append(row['code'])
-                    elif 0.03 < row['pct_hold'] <= 0.1 and row['pct'] < 10  :   # 浮盈3%以上但没有涨停，卖出一半仓位
-                        print(sfm.sell(symbol=row['code'], price=row['close'], stock_num=round(row['quantity_can_use'] / 2 , 0))) 
+                    elif row['close'] <= row['open'] and 0.02 < row['pct_hold'] <= 0.1 and row['pct'] < 9  :   # 浮盈3%以上但没有涨停，卖出一半仓位
+                        quantity_can_use =round(quantity_can_use / 2 , 0) if quantity_can_use > 100 else quantity_can_use
+                        quantity_can_use = quantity_can_use - (quantity_can_use % 100)  # 确保是整手
+                        print(sfm.sell(symbol=row['code'], price=sell_price, stock_num=quantity_can_use)) 
                         selled.append(row['code'])
-                    elif 0.1 < row['pct_hold'] <= 0.3 and row['pct'] < 10  :   # 浮盈10%以上但没有涨停，卖空
-                        print(sfm.sell(symbol=row['code'], price=row['close'], stock_num=row['quantity_can_use'])) 
+                    elif row['close'] <= row['open'] and 0.1 < row['pct_hold'] and row['pct'] < 9  :   # 浮盈10%以上但没有涨停，卖空
+                        print(sfm.sell(symbol=row['code'], price=sell_price, stock_num=quantity_can_use)) 
                         selled.append(row['code'])
                     elif row['pct'] > 5  :   # 已持仓的股票当前涨幅5%以上的不再补仓
                         not_needed_add_position.append(row['code'])
@@ -104,7 +110,7 @@ class LargeBuyStockRadar(StockRadar):
                     
             if ganzhou_index > -0.05:      # 情绪太差，不开仓    
                 now = datetime.now()
-                if now.hour > 10:  # 上午10点后，先过滤掉涨幅大于8%的股票，避免追高买入站岗
+                if now.hour >= 10:  # 上午10点后，先过滤掉涨幅大于8%的股票，避免追高买入站岗
                     df = df[df["pct"] < 8 ]                       
                 df_buy = df.head(int(self.topN/2))    
                 df_buy = df[~df['code'].isin(selled)]  # 过滤掉已经卖出的股票            
@@ -114,13 +120,13 @@ class LargeBuyStockRadar(StockRadar):
                 
                 price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
                 
-                stock_prices={row['code']:round(row['close'] * price_rate,2)  for index, row in df_buy.iterrows()} # 股票价格
+                stock_prices={row['code']:min(round(row['close'] * price_rate,2),row('upper_limit'))  for index, row in df_buy.iterrows()} # 股票价格
         
                 print(sfm.execute_buy(stock_prices = stock_prices, position_ratio = position_ratio ))
             
             # 10、发送消息通知  
             now = datetime.now()
-            if now.hour > 10:  # 上午10点后，通知中会过滤掉涨幅大于10%的股票 
+            if now.hour >= 10:  # 上午10点后，通知中会过滤掉涨幅大于10%的股票 
                 df = df[df["pct"] < 10 ]  
             df = df.head(self.topN)          
             wecom_msg_enabled= os.environ.get('WECOM_MSG_ENABLED').lower() == 'true'

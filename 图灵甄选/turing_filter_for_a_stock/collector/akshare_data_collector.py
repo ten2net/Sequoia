@@ -129,6 +129,13 @@ class AkshareDataCollector(DataCollector):
         # print(df.columns)
         df.columns = list(Constants.BAR_DAY_COLUMNS)
         df['close_yestday'] = df['close'].shift(1)
+        # 计算涨跌停价
+        limit_ratio = 0.2 if symbol.startswith('3') or symbol.startswith('68') or symbol.startswith('4') else 0.1 # 不考虑北交所
+        limit_ratio = 0.3 if symbol.startswith('4') else limit_ratio # 北交所
+        upper_limit_price, lower_limit_price = self.calculate_limit_prices( df['close'].shift(1), limit_ratio=limit_ratio)
+        df['upper_limit'] = upper_limit_price
+        df['lower_limit'] = lower_limit_price
+        
         df['pct_yestday'] = df['pct'].shift(1)
         df['volume_yestday'] = df['volume'].shift(1)
         df['amount_yestday'] = df['amount'].shift(1)
@@ -164,15 +171,48 @@ class AkshareDataCollector(DataCollector):
                               close=df.close, volume=df.volume, length=88)
         return df
 
+    def __get_limit_price__(self,row):
+        symbol = row['code']
+        limit_ratio = 0.2 if symbol.startswith('3') or symbol.startswith('68') or symbol.startswith('4') else 0.1 # 不考虑北交所
+        limit_ratio = 0.3 if symbol.startswith('4') else limit_ratio # 北交所
+        upper_limit_price, lower_limit_price = self.calculate_limit_prices( row['close'], limit_ratio=limit_ratio)      
+        return (upper_limit_price, lower_limit_price)
     def get_stock_zh_a_spot_em(self):
         df = ak.stock_zh_a_spot_em()
         df.drop(columns=['序号'], inplace=True)
         df.drop(columns=['涨跌额'], inplace=True)
         df.drop(columns=['涨速'], inplace=True)
         df.columns = list(Constants.SPOT_EM_COLUMNS)
+         # 计算涨跌停价 
+        df['upper_limit'] = df.apply(lambda row: self.__get_limit_price__(row)[0] ,axis=1 )
+        df['lower_limit'] = df.apply(lambda row: self.__get_limit_price__(row)[1] ,axis=1 )
         return df
 
     def fetch_intraday_data(self, symbol, start_time, end_time):
         # Akshare may not support intraday data fetching directly
         raise NotImplementedError(
             "Intraday data fetching is not supported by Akshare")
+    def trading_detail_before_bak(symbol:str):
+        pass
+        # df = ak.stock_zh_a_hist_pre_min_em(symbol=symbol, start_time="09:00:00", end_time="09:32:00")
+        # volume_times =True #( df.iloc[-2]['成交量'] / df.iloc[-7]['成交量'] )> 2
+        # volume_times_32 = ( df.iloc[-1]['成交量'] / df.iloc[-2]['成交量'] )> 0.75
+        # price_times =( df.iloc[-1]['最新价'] / df.iloc[-7]['最新价'] )>1.000
+        # price_gt_3 = df.iloc[-1]['最新价'] > 3
+        # volume_gt_2000 = (df.iloc[-7]['最新价']<10 and df.iloc[-7]['成交量'] > 1000) or(df.iloc[-7]['最新价']>=10 and df.iloc[-7]['成交量'] > 2000)
+        # return (volume_times and price_times and volume_times_32 and price_gt_3 and volume_gt_2000 ,
+        #         df.iloc[-3]['开盘'], 
+        #         df.iloc[-7]['成交量'],
+        #         df.iloc[-7]['最新价'],
+        #         df.iloc[-2]['开盘'],
+        #         df.iloc[-2]['收盘'],
+        #         df.iloc[-2]['最高'],
+        #         df.iloc[-2]['最低'],
+        #         df.iloc[-2]['成交量'],
+        #         df.iloc[-2]['最新价'],
+        #         df.iloc[-1]['开盘'],
+        #         df.iloc[-1]['收盘'],
+        #         df.iloc[-1]['最高'],
+        #         df.iloc[-1]['最低'],
+        #         df.iloc[-1]['成交量'],
+        #         df.iloc[-1]['最新价'])        

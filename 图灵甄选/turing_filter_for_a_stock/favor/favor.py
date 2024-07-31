@@ -31,12 +31,15 @@ class StockFavorManagement:
         for symbol in symbols:
             print(em.del_from_group(symbol, group_name=group_name, entity_type="stock"))
     def buy(self, symbol:str, price:float, stock_num:int):
+       stock_num=math.floor(stock_num)
        return em.buy(symbol, price, stock_num)
     def sell(self, symbol:str, price:float, stock_num:int):
+       stock_num=math.floor(stock_num)
        return em.sell(symbol, price, stock_num)
        
     def get_position(self)->Optional[List[dict]]:
         return em.get_position()
+    
     def execute_buy(self, stock_prices, position_ratio):
         """
         执行买入操作的函数。        

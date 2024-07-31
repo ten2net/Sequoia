@@ -22,3 +22,14 @@ class DataCollector(ABC):
         :return: Intraday data fetched from the source.
         """
         pass
+    def calculate_limit_prices(self,yesterday_close, limit_ratio):
+        """
+        根据昨日收盘价和涨跌停幅度计算今日的涨停价和跌停价。
+        
+        :param yesterday_close: 昨日收盘价
+        :param limit_ratio: 涨跌停幅度比例（例如，10% 应传入 0.10）
+        :return: 涨停价和跌停价
+        """
+        upper_limit_price = round(yesterday_close * (1 + limit_ratio),2)
+        lower_limit_price = round(yesterday_close * (1 - limit_ratio),2)
+        return upper_limit_price, lower_limit_price    
