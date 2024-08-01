@@ -24,9 +24,14 @@ class LargeBuyStockRadar(StockRadar):
         self.topN = min(topN,22)
     def startup(self):
         # 1 准备市场行情快照，获取股票代码、名称、总市值、PE、PB等指标，用于筛选股票
-        market_spot_df = AkshareDataCollector().get_stock_zh_a_spot_em()
-        market_spot_df_all = market_spot_df
-        market_spot_df = market_spot_df[Constants.SPOT_EM_COLUMNS_BASE] 
+        try:
+            akshareDataCollector = AkshareDataCollector()
+            market_spot_df = akshareDataCollector.get_stock_zh_a_spot_em()
+            market_spot_df_all = market_spot_df
+            market_spot_df = market_spot_df[Constants.SPOT_EM_COLUMNS_BASE] 
+        except Exception as e:
+            print(f'Akshare接口调用异常{e}')
+            return
         # 2、准备主股票池和其他附加股票池
         mainStockPool = LargeBuyStockPool()        
         stockPools = [mainStockPool]  
@@ -45,8 +50,7 @@ class LargeBuyStockRadar(StockRadar):
         # 4、获取股票数据，并附加其他指标
         # df = mainStockPool.get_data_with_indictores(symbols,withCDL=False)
         df = mainStockPool.get_data(symbols)
-        df = df.merge(market_spot_df, on="code", how="left")
-        
+        df = df.merge(market_spot_df, on="code", how="left") 
         # 5、附加其他指标
         # 6、筛选股票，实现单独的过滤器，添加到过滤器链中即可
         filters = [
@@ -66,69 +70,91 @@ class LargeBuyStockRadar(StockRadar):
             #               SentimentScorer().score(df)
             
             # 8、排序            
-            df = df.head(round(2 * self.topN))  #自选股不受长度限制
-            print(colored(f"""{self.name}发现了 {df.shape[0]} 个目标：{df['name'].tolist()}""","green"))
-            # 9、更新自选股            
-            sfm = StockFavorManagement()
-            results =df['code'].tolist()
-            results =  results[::-1]  #确保新加自选的在上面
-            sfm.add_to_group(results, group_name=self.name)
-            # 9.1、模拟盘  
-            sfm = StockFavorManagement()   
-            hold_position = sfm.get_position()
-            selled:List[str]=[] # 刚下了卖单的股票代码，避免刚卖出后又买进来
-            not_needed_add_position:List[str]=[] # 不可加仓的股票代码，已持仓的股票当前涨幅5%以上的不再补仓
-            if hold_position is not None:
-                df_hold = pd.DataFrame(data=hold_position)
-                df_hold['quantity'] = df_hold['quantity'].astype(int)
-                df_hold['quantity_can_use'] = df_hold['quantity_can_use'].astype(int)
-                df_hold['purchase_price'] = df_hold['purchase_price'].astype(float)
-                
-                df_host_current = df_hold.merge(market_spot_df_all, on="code", how="left")
-                # 计算持仓浮盈
-                df_host_current['pct_hold'] = (df_host_current['close'] - df_host_current['purchase_price']) / df_host_current['purchase_price']
-                df_can_sell = df_host_current[df_host_current['quantity_can_use'] > 0]  # 过滤掉不能卖出的股票，避免废单
-
-                for index, row in df_can_sell.iterrows():
-                    quantity_can_use = row['quantity_can_use']
-                    sell_price = max(round(row['close'] * 0.995 , 2) ,row["lower_limit"])  # 确保尽量能出手
-                    if row['close'] <= row['open'] and row['pct_hold'] < -0.01 :   # 浮亏1%以上，卖空
-                        print(sfm.sell(symbol=row['code'], price=sell_price, stock_num=quantity_can_use))
-                        selled.append(row['code'])
-                    elif row['close'] <= row['open'] and 0.02 < row['pct_hold'] <= 0.1 and row['pct'] < 9  :   # 浮盈3%以上但没有涨停，卖出一半仓位
-                        quantity_can_use =round(quantity_can_use / 2 , 0) if quantity_can_use > 100 else quantity_can_use
-                        quantity_can_use = quantity_can_use - (quantity_can_use % 100)  # 确保是整手
-                        print(sfm.sell(symbol=row['code'], price=sell_price, stock_num=quantity_can_use)) 
-                        selled.append(row['code'])
-                    elif row['close'] <= row['open'] and 0.1 < row['pct_hold'] and row['pct'] < 9  :   # 浮盈10%以上但没有涨停，卖空
-                        print(sfm.sell(symbol=row['code'], price=sell_price, stock_num=quantity_can_use)) 
-                        selled.append(row['code'])
-                    elif row['pct'] > 5  :   # 已持仓的股票当前涨幅5%以上的不再补仓
-                        not_needed_add_position.append(row['code'])
-                    else:
-                        pass
-                    
-            if ganzhou_index > -0.05:      # 情绪太差，不开仓    
-                now = datetime.now()
-                if now.hour >= 10:  # 上午10点后，先过滤掉涨幅大于8%的股票，避免追高买入站岗
-                    df = df[df["pct"] < 8 ]                       
-                df_buy = df.head(int(self.topN/2))    
-                df_buy = df[~df['code'].isin(selled)]  # 过滤掉已经卖出的股票            
-                df_buy = df[~df['code'].isin(not_needed_add_position)]  # 过滤掉不需要补仓的股票            
-
-                position_ratio = ganzhou_index  # 仓位比例，情绪越差，仓位比例越低，情绪越好，仓位比例越高          
-                
-                price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
-                
-                stock_prices={row['code']:min(round(row['close'] * price_rate,2),row('upper_limit'))  for index, row in df_buy.iterrows()} # 股票价格
-        
-                print(sfm.execute_buy(stock_prices = stock_prices, position_ratio = position_ratio ))
+            df = df.head(round(1.5 * self.topN))  #自选股不受长度限制
+            df['is_hot_industry'] = df['code'].apply(lambda code: akshareDataCollector.is_hot_industry(code))
             
+            df.sort_values(by=['is_hot_industry','pct'], ascending=[False,False], inplace=True)
+            df = df.reset_index(drop=True)
+            print(colored(f"""{self.name}发现了 {df.shape[0]} 个目标：{df['name'].tolist()}""","green"))
+            # 9、自选股与模拟盘  
+            try:
+                # 9.1、更新自选股   
+                sfm = StockFavorManagement()
+                results =df['code'].tolist()
+                results =  results[::-1]  #确保新加自选的在上面
+                sfm.add_to_group(results, group_name=self.name)
+                # 9.2、模拟盘 
+                # 9.2.1 卖出逻辑
+                hold_position = sfm.get_position()
+                selled:List[str]=[] # 刚下了卖单的股票代码，避免刚卖出后又买进来
+                not_needed_add_position:List[str]=[] # 不可加仓的股票代码，已持仓的股票当前涨幅5%以上的不再补仓
+                if hold_position is not None:
+                    now = datetime.now()
+                    lock_position =False
+                    if ganzhou_index >= 0.1 and now.hour < 14:  # 情绪好时，只在下午14点后，才考虑卖出股票
+                        lock_position =True  # 仓位锁仓
+
+                    df_hold = pd.DataFrame(data=hold_position)
+                    df_hold['quantity'] = df_hold['quantity'].astype(int)
+                    df_hold['quantity_can_use'] = df_hold['quantity_can_use'].astype(int)
+                    df_hold['purchase_price'] = df_hold['purchase_price'].astype(float)
+                    
+                    df_host_current = df_hold.merge(market_spot_df_all, on="code", how="left")
+                    # 计算持仓浮盈
+                    df_host_current['pct_hold'] = (df_host_current['close'] - df_host_current['purchase_price']) / df_host_current['purchase_price']
+                    df_can_sell = df_host_current[df_host_current['quantity_can_use'] > 0]  # 过滤掉不能卖出的股票，避免废单
+
+                    for index, row in df_can_sell.iterrows():
+                        quantity_can_use = row['quantity_can_use']
+                        sell_price = max(round(row['close'] * 0.995 , 2) ,row["lower_limit"])  # 确保尽量能出手
+                        if ganzhou_index < 0.05 :   # 情绪太差，一键清仓
+                            print(sfm.sell(symbol=row['code'], price=sell_price, stock_num=quantity_can_use))
+                            selled.append(row['code'])                    
+                        elif lock_position == False:
+                            sell_signal =(row['high'] - row['low']) / row['open'] > 0.1 or (row['high'] > row['open'] and row['close'] < row['open'])
+                            if sell_signal and row['pct_hold'] < -0.01 :   # 浮亏1%以上，卖空
+                                print(sfm.sell(symbol=row['code'], price=sell_price, stock_num=quantity_can_use))
+                                selled.append(row['code'])
+                            elif sell_signal and 0.03 < row['pct_hold'] <= 0.1 and row['pct'] < 9  :   # 浮盈3%以上但没有涨停，卖出一半仓位
+                                quantity_can_use =round(quantity_can_use / 2 , 0) if quantity_can_use > 100 else quantity_can_use
+                                quantity_can_use = quantity_can_use - (quantity_can_use % 100)  # 确保是整手
+                                print(sfm.sell(symbol=row['code'], price=sell_price, stock_num=quantity_can_use)) 
+                                selled.append(row['code'])
+                            elif sell_signal and 0.1 < row['pct_hold'] and row['pct'] < 9  :   # 浮盈10%以上但没有涨停，卖空
+                                print(sfm.sell(symbol=row['code'], price=sell_price, stock_num=quantity_can_use)) 
+                                selled.append(row['code'])
+                    
+                        if row['pct'] > 5  :   # 已持仓的股票当前涨幅5%以上的不再补仓
+                            not_needed_add_position.append(row['code'])
+                # 8.2.2、买入逻辑        
+                if ganzhou_index >= 0.05:      # 开仓条件。情绪不是太差，才可以开仓 
+                    now = datetime.now()
+                    if now.hour >= 10:  # 上午10点后，只追离涨停还有7%以上上涨空间的股票，10点前只追离涨停还有2%以上上涨空间的股票
+                        df = df[((df['upper_limit_y'] - df["close"]) / df['upper_limit_y']) > 0.07 ]                    
+                    else:
+                        df = df[((df['upper_limit_y'] - df["close"]) / df['upper_limit_y']) > 0.02 ]                     
+                    df_buy = df.head(int(self.topN/2)) # 只买前排
+                    df_buy = df[~df['code'].isin(selled)]  # 过滤掉已经卖出的股票            
+                    df_buy = df[~df['code'].isin(not_needed_add_position)]  # 过滤掉不需要补仓的股票   
+                    
+                    df_buy = df[df['close'] > df['open']]  # 只买红票
+
+                    position_ratio = ganzhou_index  # 仓位比例，情绪越差，仓位比例越低，情绪越好，仓位比例越高          
+                    
+                    price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
+                    
+                    stock_prices={row['code']:min(round(row['close'] * price_rate,2),row['upper_limit_y'])  for index, row in df_buy.iterrows()} # 股票价格
+            
+                    print(sfm.execute_buy(stock_prices = stock_prices, position_ratio = position_ratio ))
+            
+            except Exception as e:
+              print(f'东方财富接口调用异常:{e}')
             # 10、发送消息通知  
             now = datetime.now()
             if now.hour >= 10:  # 上午10点后，通知中会过滤掉涨幅大于10%的股票 
-                df = df[df["pct"] < 10 ]  
+                df = df[df["pct"] < 10 ]
+            # df.sort_values(by=['is_hot_industry','pct'], ascending=[False,False], inplace=True)
             df = df.head(self.topN)          
             wecom_msg_enabled= os.environ.get('WECOM_MSG_ENABLED').lower() == 'true'
-            if wecom_msg_enabled:
+            if wecom_msg_enabled and df.shape[0] > 0:
                 WeComNotification().send_stock_df(title=self.name, df=df, ganzhou_index=ganzhou_index)

@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import List
 import math
 import pandas as pd
@@ -10,6 +11,10 @@ import math
 
 
 class AkshareDataCollector(DataCollector):
+    def __init__(self):
+        # 初始化时获取热门行业的股票代码列表，并使用lru_cache装饰器缓存结果
+        self._hot_industry_stocks = self.get_hot_industry_stocks()
+        
     market_spot:pd.DataFrame=None
     def slope_to_degrees(self, slope):
         return math.degrees(math.atan(slope))
@@ -38,7 +43,12 @@ class AkshareDataCollector(DataCollector):
         Returns:
             _type_: _description_
         """
-        df = ak.stock_changes_em(symbol=symbol)
+        try:
+            # print(symbol)
+            df = ak.stock_changes_em(symbol=symbol)
+        except Exception as e:
+            print(f'akshare接口调用异常')
+            raise e
         return df
     def __fetch_stock_hot_rank_em__(self):
         df = ak.stock_hot_rank_em() #当前排名  代码   股票名称   最新价  涨跌幅
@@ -175,7 +185,11 @@ class AkshareDataCollector(DataCollector):
         symbol = row['code']
         limit_ratio = 0.2 if symbol.startswith('3') or symbol.startswith('68') or symbol.startswith('4') else 0.1 # 不考虑北交所
         limit_ratio = 0.3 if symbol.startswith('4') else limit_ratio # 北交所
-        upper_limit_price, lower_limit_price = self.calculate_limit_prices( row['close'], limit_ratio=limit_ratio)      
+        
+        now = datetime.now()
+        close_column = "close_yesterday" if (10 <= now.hour <= 15) or (now.hour == 9 and now.minute > 20 ) else "close"  # 开市期间取上个交易日收盘价，否则取当日收盘价
+      
+        upper_limit_price, lower_limit_price = self.calculate_limit_prices( row[close_column], limit_ratio=limit_ratio)      
         return (upper_limit_price, lower_limit_price)
     def get_stock_zh_a_spot_em(self):
         df = ak.stock_zh_a_spot_em()
@@ -192,6 +206,60 @@ class AkshareDataCollector(DataCollector):
         # Akshare may not support intraday data fetching directly
         raise NotImplementedError(
             "Intraday data fetching is not supported by Akshare")
+    @lru_cache(maxsize=1)  # 由于只需要缓存一个集合，所以maxsize设置为1
+    def get_hot_industry_stocks(self)->pd.DataFrame:
+        """
+        获取当前热门行业的股票代码列表。
+        """
+        industry_df = ak.stock_board_industry_name_em()
+        hot_industry_stocks = set()  # 使用集合避免重复股票代码
+        for index, row in industry_df.iterrows():
+            if index < 8:
+                stock_df = ak.stock_board_industry_cons_em(symbol=row['板块名称'])
+                # 将股票代码添加到集合中
+                hot_industry_stocks.update(stock_df['代码'].tolist())
+        
+        # 将集合转换为列表，并保留列表顺序（如果需要）
+        return list(hot_industry_stocks)
+    def get_stock_for_hot_industry(self, topN:int=5,topK:int=10)->pd.DataFrame:
+        """
+        获取热门行业的前N个行业中，每个行业涨幅最高的前K只股票。
+        
+        Args:
+            topN (int, optional): 热门行业的数量，默认为5。
+            topK (int, optional): 每个行业涨幅最高的股票数量，默认为10。
+        
+        Returns:
+            pd.DataFrame: 返回热门行业的股票数据。
+        
+        """
+        stock_dfs_list = []
+        industry_df = ak.stock_board_industry_name_em()
+        for index, row in industry_df.iterrows():
+            if index < topN:  
+                stock_df = ak.stock_board_industry_cons_em(symbol=row['板块名称'])
+                stock_dfs_list.append(stock_df.head(topK))
+
+        combined_stock_df = pd.concat(stock_dfs_list, ignore_index=True)
+        sorted_stock_df = combined_stock_df.sort_values(by="涨跌幅", ascending=False)
+
+        sorted_stock_df = sorted_stock_df.reset_index(drop=True)
+    #     ['序号', '代码', '名称', '最新价', '涨跌幅', '涨跌额', '成交量', '成交额', '振幅', '最高', '最低',
+    #    '今开', '昨收', '换手率', '市盈率-动态', '市净率']
+        sorted_stock_df =sorted_stock_df[["代码","名称","最新价","涨跌幅","成交量","成交额"]]
+        sorted_stock_df.rename(columns={"代码":"code","名称":"name","最新价":"price","涨跌幅":"pct","成交量":"volume","成交额":"amount"},inplace=True)        
+        return sorted_stock_df     
+    def is_hot_industry(self,code:str)->bool:
+        """
+        判断一支股票是否属于前当前热门行业。
+        
+        Args:
+            code (str): 股票代码。
+        Returns:
+            bool: 属于，返回True；不属于，返回False。
+        
+        """
+        return code in self._hot_industry_stocks    
     def trading_detail_before_bak(symbol:str):
         pass
         # df = ak.stock_zh_a_hist_pre_min_em(symbol=symbol, start_time="09:00:00", end_time="09:32:00")
