@@ -10,12 +10,10 @@ import json
 
 class StockFavorManagement:
     def __init__(self):
-        load_dotenv()  
         self.session = requests.Session()
-
+        load_dotenv()  
         appkey = os.environ.get('EM_APPKEY')
         appHeader =json.loads(os.environ.get('EM_HEADER'))
-     
         em.APIKEY = appkey
         em.HEADER['Cookie']=appHeader[0]
 
@@ -59,7 +57,7 @@ class StockFavorManagement:
             raise ValueError("仓位比例必须在0和1之间")
         
         balance_info = em.get_balance_info()  # {'account': '241990400000029517', 'total_money': '999160.83', 'account_pct': '-0.30', 'account_return': '-839.17', 'market_value': '348792.72', 'can_use_money': '650368.12', 'freeze_money': '74128.72'}
-        print(balance_info)
+
         if 0 < position_ratio < 0.3 and (float(balance_info['market_value']) /float(balance_info['total_money'])) > 0.7:
             return {}
         if -0.1 < position_ratio < 0 and (float(balance_info['market_value']) /float(balance_info['total_money'])) > 0.5:

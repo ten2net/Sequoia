@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 my_env={
   "appkey": "",
-  "header":""
+  "header":"ct="
 }
 
 APIKEY = my_env["appkey"]
@@ -70,7 +70,6 @@ def get_groups(session: Session = None):
         resp = session.get(url, headers=HEADER)
     else:
         resp = requests.get(url, headers=HEADER)
-
     _, value = parse_resp(resp, key="ginfolist")
     return value
 
@@ -168,6 +167,7 @@ def add_symbols_to_group(
         resp = session.get(url, headers=HEADER)
     else:
         resp = requests.get(url, headers=HEADER)
+    # print(resp.text)
 def del_symbols_from_group(
         codes, entity_type="stock", group_name=None, group_id=None, session: Session = None
 ):
@@ -436,7 +436,7 @@ def update_em_favor_list(symbol_list:list[str],group_full_name:str ,group_new_na
     else:
         # 删除上一榜出票
         stocks = list_entities(group_name=group_new_name, session=session)
-        del_all_from_group( group_name=group_new_name, entity_type="stock")
+        # del_all_from_group( group_name=group_new_name, entity_type="stock")
     
     # 图灵甄选全榜中包含全部的出票
     group_id_today = get_group_id(group_full_name,session)
@@ -445,7 +445,7 @@ def update_em_favor_list(symbol_list:list[str],group_full_name:str ,group_new_na
     # 添加自选 
     group_name_list = [group_new_name,group_full_name] 
     for group_name in group_name_list:       
-        add_symbols_to_group(symbol_list, group_name=group_name, entity_type="stock")
+       print(add_symbols_to_group(symbol_list, group_name=group_name, entity_type="stock"))
 
 __all__ = [
     "create_group",
@@ -478,7 +478,7 @@ if __name__ == "__main__":
     # create_group("932",session)
     # for stock in stocks[::-1]:
     #   add_to_group(stock, group_name="932", entity_type="stock")      
-    group_name_new = "最新甄选"
+    # group_name_new = "最新甄选"
     # gid = get_group_id(group_name_new,session)
     # print(del_group(group_name_new,gid,session))
     # create_group(group_name_new,session)   
@@ -487,9 +487,15 @@ if __name__ == "__main__":
     # add_to_group('300735', group_name=group_name_new, entity_type="stock") 
     # resp =buy(code = "000001",price = 10.35, stock_num=500 )
     # print(resp ,type(resp), resp.text )
+    sym =['000421', '002611', '600621', '000828', '002837', '003026', '002001', '603662', '600216', '000957', '600200', '002869', '002296', '300446', '300123', '002735', '300455', '600336', '603988', '600843', '002979', '300011', '600719', '001208', '600990', '600764', '600686', '600817', '603686', '001379', '002685', '301112', '000547', '000868', '000901', '002829', '603508', '603107', '000880', '000572', '603390', '600386', '300053', '300424']
+    group_name="大笔买入"
+    group_full_name=f"{group_name[:3]}全榜"
+    group_new_name=group_name
+    # print(get_group_id(group_new_name,session))
+    print(update_em_favor_list(sym,group_full_name=group_full_name,group_new_name=group_new_name))
     
     # print(get_position())
-    # 
+    # print(get_can_cancel_order())
     # hangup_order =get_can_cancel_order()
     # for item in hangup_order:
     #     if item['mmflag'] == '0':
@@ -499,7 +505,7 @@ if __name__ == "__main__":
 
     # print(commit_buy_or_sell_order(code = "603270",price = 19.40, stock_num=300,order_type ="spo_order_limit" ) )
     # print(buy(code = "603270",price = 19.40, stock_num=300 ) )
-    print(sell(code = "000099",price = 18.40, stock_num=100.0 ) )
+    # print(sell(code = "000099",price = 18.40, stock_num=100.0 ) )
     # print(get_can_cancel_order())
     
     
