@@ -71,7 +71,7 @@ def main():
     else:
         pbar_list = []
         task_cron_config=[
-            ([9],[25],[start_jingjia_rice_radar]),
+            ([9],[26],[start_jingjia_rice_radar]),
             ([9],[30 + i * 2 for i in range(29 // 2 + 1)],[start_financial_radar_system]),
             ([11],[i * 3 for i in range(30 // 3 + 1)],[start_financial_radar_system]),
             ([10,13,14],[i * 3 for i in range(59 // 3 + 1)],[start_financial_radar_system]),
