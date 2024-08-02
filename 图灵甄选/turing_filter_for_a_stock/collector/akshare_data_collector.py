@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import List
+from typing import List, Literal
 import math
 import pandas as pd
 import pandas_ta as ta
@@ -260,27 +260,40 @@ class AkshareDataCollector(DataCollector):
         
         """
         return code in self._hot_industry_stocks    
-    def trading_detail_before_bak(symbol:str):
-        pass
-        # df = ak.stock_zh_a_hist_pre_min_em(symbol=symbol, start_time="09:00:00", end_time="09:32:00")
-        # volume_times =True #( df.iloc[-2]['成交量'] / df.iloc[-7]['成交量'] )> 2
-        # volume_times_32 = ( df.iloc[-1]['成交量'] / df.iloc[-2]['成交量'] )> 0.75
-        # price_times =( df.iloc[-1]['最新价'] / df.iloc[-7]['最新价'] )>1.000
-        # price_gt_3 = df.iloc[-1]['最新价'] > 3
-        # volume_gt_2000 = (df.iloc[-7]['最新价']<10 and df.iloc[-7]['成交量'] > 1000) or(df.iloc[-7]['最新价']>=10 and df.iloc[-7]['成交量'] > 2000)
-        # return (volume_times and price_times and volume_times_32 and price_gt_3 and volume_gt_2000 ,
-        #         df.iloc[-3]['开盘'], 
-        #         df.iloc[-7]['成交量'],
-        #         df.iloc[-7]['最新价'],
-        #         df.iloc[-2]['开盘'],
-        #         df.iloc[-2]['收盘'],
-        #         df.iloc[-2]['最高'],
-        #         df.iloc[-2]['最低'],
-        #         df.iloc[-2]['成交量'],
-        #         df.iloc[-2]['最新价'],
-        #         df.iloc[-1]['开盘'],
-        #         df.iloc[-1]['收盘'],
-        #         df.iloc[-1]['最高'],
-        #         df.iloc[-1]['最低'],
-        #         df.iloc[-1]['成交量'],
-        #         df.iloc[-1]['最新价'])        
+    def get_hot_symbols(self,k:int = 5):
+        industry_df = ak.stock_board_industry_name_em()
+        df_alll=[]
+        
+        now = datetime.now()
+        time926 = datetime(now.year,now.month,now.day,9,26,0)
+        n = math.floor((now - time926).total_seconds()/60)
+        if n < 0:
+            return None
+        n = n - 4 if n >= 5 else 0  # 9:27-9:30之间，不取数据
+        for index,row in industry_df.iterrows():  
+            if index < 8:   # 热门行业前8个
+                stock_df = ak.stock_board_industry_cons_em(symbol=row['板块名称'])
+                stock_df=stock_df.head(k)
+                for index2,row2 in stock_df.iterrows(): 
+                    df = ak.stock_zh_a_hist_pre_min_em(symbol=row2['代码'], start_time="09:00:00")
+                    df=df[ df['成交额'] > 0]
+                    df["总成交额"] = df["成交额"].cumsum()
+                    df['代码']=row2['代码']
+                    df['名称']=row2['名称']
+                    
+                    ind = min(n,df.shape[0]) - df.shape[0]  
+                                
+                    df_alll.append(df.iloc[ind])
+        df = pd.DataFrame(df_alll)
+        df["成交额"] = df["成交额"] / (10000 * 10000)
+        df["总成交额"] = df["总成交额"] / (10000 * 10000)
+                
+        df = df.sort_values(by="总成交额",ascending=False)
+        
+        df.reset_index(drop=True)
+        
+        df = df[["代码","名称","开盘","最高","最低","收盘","成交量","总成交额"]]
+        df.columns = ['code','name', 'open', 'high', 'low', 'close', 'volume', 'amount']
+        return df
+    
+

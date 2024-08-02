@@ -82,9 +82,8 @@ class JingJiaRiseStockPool(StockPool):
     
     """
     df = self.adc.get_jingjia_rise_event()
-    print(df)
     df.sort_values(by='diff', ascending=False, inplace=True)
-    print(df)
+    df = df.reset_index(drop=True)
     symbols = df['code'].tolist()
     return symbols   
   
@@ -106,6 +105,7 @@ class LargeBuyStockPool(StockPool):
     df2 = self.adc.get_rapit_rise_event()
     df = pd.concat([df1, df2], axis=0, ignore_index=True)
     df.sort_values(by='diff', ascending=False, inplace=True)
+    df = df.reset_index(drop=True)    
     symbols = list(set(df['code'].tolist()))
     return symbols   
     
@@ -127,4 +127,25 @@ class HotRankStockPool(StockPool):
     df.sort_values(by='rank', ascending=True, inplace=True)
     df = df.head(k).copy()
     symbols = df['code'].tolist()
-    return symbols     
+    return symbols  
+     
+class HotSymbolStockPool(StockPool):
+  def __init__(self):
+    self.adc = AkshareDataCollector()
+  def get_symbols(self,k:int=5)->List[str]:
+    """
+    获取8大热门行业靠前的股票列表
+    
+    Args:
+        k (int, optional): 返回的股票数量，默认为5。
+    
+    Returns:
+        list: 包含股票符号的列表。
+    
+    """
+    df = self.adc.get_hot_symbols(k)
+    if df is not None :
+      symbols = df['code'].tolist()
+      return symbols   
+    else :
+      return []  
