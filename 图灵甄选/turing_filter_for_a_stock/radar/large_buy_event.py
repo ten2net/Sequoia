@@ -151,9 +151,8 @@ class LargeBuyStockRadar(StockRadar):
               print(f'东方财富接口调用异常:{e}')
             # 10、发送消息通知  
             now = datetime.now()
-            if now.hour >= 10:  # 上午10点后，通知中会过滤掉涨幅大于10%的股票 
+            if now.hour >= 13:  # 下午13点后，通知中会过滤掉涨幅大于10%的股票 
                 df = df[df["pct"] < 10 ]
-            # df.sort_values(by=['is_hot_industry','pct'], ascending=[False,False], inplace=True)
             df = df.head(self.topN)   
             df['name'] =  df.apply(lambda row: "☀"+ row['name'] if row['is_hot_industry'] else row['name'], axis=1)     
             wecom_msg_enabled= os.environ.get('WECOM_MSG_ENABLED').lower() == 'true'
