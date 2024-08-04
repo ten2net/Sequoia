@@ -235,8 +235,7 @@ def sell(code:str, price:float,stock_num:int)->str:
 def commit_buy_or_sell_order(code:str, price:float,stock_num:int,buy_or_sell:Literal['buy', 'sell'] = 'buy',order_type:Literal['spo_order', 'spo_order_limit'] = "spo_order")->str:
     ts = current_timestamp()
     userid='2090094314376082'
-    ctToken="RMw3jGQaWkKGz7v-DWWT-7G5pseKYoUAKCTo7nodiuc6r2wAgK_cGVYZg7WgnSRc8vLqXo96GiM5xZqn4HcgaZfkto1FFp9vWf5zY-tMJcWGRwLhIRtUFHMTb5nPyRYgP5yMvmC_VbXTZPx0XoL8XX_doVToX0x3VFomieXL98g"
-    utToken="FobyicMgeV7JB-nm6VZO-UUwigGmwZjvb9fFo6XVFphAB_tT-zJaKYv5-XvwIJapoJk8c6XLhbUn0JXDpCcLMhJtr_RkKChrx-GWuGUaxkFQmuBVK8hpClmiyU0vb_qQMqrXJw1aN43bapSm-lXpst5ZNoj6MH-N4sKuo2_KihUvoUYYGiB1iXGFM4FEuaCitSmpsM3cROAuMENGATxJR_lQ4HwNYIXhPc1jGwb7KyMta8QsdhYcKGOiHRxO_ASCJVt0kPFZSi1eDMBlU6pctRa2z34O4olufeQ2PIwAUHyUYyBPXwZTvts7YOqiPIW_NeepykUsfVNF0VgGIICQEKGMLTZ3vvYjns9on9IYHwZOCi8Y7SvTPL0XDrdeB8Vmj-FpMelG9-bkXHPaf6xfXFKxSg9ocCW0XbM1q0PtqRnVLLuvqxzMCRaiWxe7cW1wLgLoKEepXZU8zu9Kxr_Bih9zTZp9gROoPDnW1NGM4Cq3VvPG4BC05wm2I1KjOa_A3BL9sXcI5H8"
+
     mktCode="1" if code.startswith("6") else "0"
     zjzh="241990400000029517"
     order_type="spo_order"  # spo_hold 持仓信息
@@ -273,8 +272,8 @@ def cancel_order(code:str,order_no:str)->str:
     # 
     ts = current_timestamp()
     userid='2090094314376082'
-    ctToken="RMw3jGQaWkKGz7v-DWWT-7G5pseKYoUAKCTo7nodiuc6r2wAgK_cGVYZg7WgnSRc8vLqXo96GiM5xZqn4HcgaZfkto1FFp9vWf5zY-tMJcWGRwLhIRtUFHMTb5nPyRYgP5yMvmC_VbXTZPx0XoL8XX_doVToX0x3VFomieXL98g"
-    utToken="FobyicMgeV7JB-nm6VZO-UUwigGmwZjvb9fFo6XVFphAB_tT-zJaKYv5-XvwIJapoJk8c6XLhbUn0JXDpCcLMhJtr_RkKChrx-GWuGUaxkFQmuBVK8hpClmiyU0vb_qQMqrXJw1aN43bapSm-lXpst5ZNoj6MH-N4sKuo2_KihUvoUYYGiB1iXGFM4FEuaCitSmpsM3cROAuMENGATxJR_lQ4HwNYIXhPc1jGwb7KyMta8QsdhYcKGOiHRxO_ASCJVt0kPFZSi1eDMBlU6pctRa2z34O4olufeQ2PIwAUHyUYyBPXwZTvts7YOqiPIW_NeepykUsfVNF0VgGIICQEKGMLTZ3vvYjns9on9IYHwZOCi8Y7SvTPL0XDrdeB8Vmj-FpMelG9-bkXHPaf6xfXFKxSg9ocCW0XbM1q0PtqRnVLLuvqxzMCRaiWxe7cW1wLgLoKEepXZU8zu9Kxr_Bih9zTZp9gROoPDnW1NGM4Cq3VvPG4BC05wm2I1KjOa_A3BL9sXcI5H8"
+    
+    
     mktCode="1" if code.startswith("6") else "0"
     zjzh="241990400000029517"
     # wth='242100200000068562'
