@@ -264,9 +264,9 @@ def commit_buy_or_sell_order(code:str, price:float,stock_num:int,buy_or_sell:Lit
             return f"{mmfx_zh}{code}, 下单成功"
         else:
             msg = ret.get("message")     
-            return f"{mmfx_zh}{code}, 下单失败! 原因：{msg}"
+            return f"{mmfx_zh}{code}, 下单失败! 原因：{msg} {url}"
     else:
-        return f"请求失败！状态码：{resp.status_code}.{resp.content}"
+        return f"请求失败！状态码：{resp.status_code}. {resp.content} {url}"
     
 def cancel_order(code:str,order_no:str)->str:
     # 

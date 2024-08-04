@@ -108,6 +108,8 @@ class LargeBuyStockRadar(StockRadar):
                     for index, row in df_can_sell.iterrows():
                         quantity_can_use = row['quantity_can_use']
                         sell_price = max(round(row['close'] * 0.995 , 2) ,row["lower_limit"])  # 确保尽量能出手
+                        if math.isnan(sell_price):  # 对于停牌股票的卖出策略，临时先这样处理：涨8个点卖出
+                            sell_price = row['close_yesterday'] + 0.08 * row['close_yesterday']                        
                         if ganzhou_index < 0.05 :   # 情绪太差，一键清仓
                             print(sfm.sell(symbol=row['code'], price=sell_price, stock_num=quantity_can_use))
                             selled.append(row['code'])                    
