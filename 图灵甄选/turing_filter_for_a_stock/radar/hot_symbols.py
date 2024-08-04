@@ -47,6 +47,9 @@ class HotSymbolStockRadar(StockRadar):
         # 4、获取股票数据，并附加其他指标
         # df = mainStockPool.get_data_with_indictores(symbols,withCDL=False)
         df = mainStockPool.get_data(symbols)
+        if df.shape[0] == 0:
+            print(colored("未到集合竞价时间！",'red'))
+            return
         df = df.merge(market_spot_df, on="code", how="left") 
         # 5、附加其他指标
         # 6、筛选股票，实现单独的过滤器，添加到过滤器链中即可
@@ -58,7 +61,7 @@ class HotSymbolStockRadar(StockRadar):
         df = filter_chain.apply(df)
         
         if df.shape[0] == 0:
-            print("无满足条件的股票！")
+            print(colored("无满足条件的股票！",'yellow'))
         else:
             # 计算情绪指数
             ganzhou_index =self.compute_market_sentiment_index()

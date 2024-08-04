@@ -37,10 +37,8 @@ class StockPool(ABC):
             pbar.update(1)
         
         # 使用pd.concat合并最后一行的DataFrame列表
-        df_last_rows = pd.concat(last_rows_data)        
-        
-  
-        return df_last_rows
+        return pd.concat(last_rows_data)   if len(last_rows_data) > 0 else pd.DataFrame()     
+
     def get_data_with_indictores(self, symbols: List[str],withCDL: bool=False)->pd.DataFrame:
         """
         获取每个symbol带有指标的最新行情数据。
