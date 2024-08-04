@@ -11,7 +11,7 @@ from filter.trading.volume_filter import HighVolumeFilter
 from kline.kline_style import KLineStyles, KLineStyles_cdls
 from notification.wecom import WeComNotification
 from radar.base import StockRadar
-from favor.favor import StockFavorManagement
+from favor.favor import FavorManager, StockFavorManagement
 from pool.pool import AmountStockPool, FavorStockPool, LargeBuyStockPool
 from filter.trading.indictor_trading_filter import IndicatorTradingFilter
 import os
@@ -78,13 +78,14 @@ class LargeBuyStockRadar(StockRadar):
             print(colored(f"""{self.name}发现了 {df.shape[0]} 个目标：{df['name'].tolist()}""","green"))
             # 9、自选股与模拟盘  
             try:
-                # 9.1、更新自选股   
-                sfm = StockFavorManagement()
+                # 9.1、更新自选股               
                 results =df['code'].tolist()
                 results =  results[::-1]  #确保新加自选的在上面
-                sfm.add_to_group(results, group_name=self.name)
+                favorManager =FavorManager()
+                favorManager.update_favor(results, group_name=self.name)
                 # 9.2、模拟盘 
                 # 9.2.1 卖出逻辑
+                sfm = StockFavorManagement()
                 hold_position = sfm.get_position()
                 selled:List[str]=[] # 刚下了卖单的股票代码，避免刚卖出后又买进来
                 not_needed_add_position:List[str]=[] # 不可加仓的股票代码，已持仓的股票当前涨幅5%以上的不再补仓
