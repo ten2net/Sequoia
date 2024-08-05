@@ -7,7 +7,8 @@ import schedule
 from tqdm import tqdm
 import argparse
 import threading
-from config import stock_radares
+from config import stock_radares,jinjia_stock_radares
+from radar.hot_symbols import HotSymbolStockRadar
 from radar.jingjia_rise_event import JingJiaRiseStockRadar
 
 def next_exec_seconds(hour=9, minute=26):
@@ -38,7 +39,15 @@ def start_financial_radar_system():
     for thread in threads:
         thread.join()  
 def start_jingjia_rice_radar():
-    JingJiaRiseStockRadar().startup()
+    threads = []
+    for radar in jinjia_stock_radares:
+        thread = threading.Thread(target=radar.startup)
+        thread.start()  # 启动线程
+        threads.append(thread)
+    # 等待所有线程完成
+    for thread in threads:
+        thread.join()    
+
 def demo925_1():
     print("demo925_1 fas exec!")
 def demo925_2():
@@ -71,7 +80,7 @@ def main():
     else:
         pbar_list = []
         task_cron_config=[
-            ([9],[26,30,31],[start_jingjia_rice_radar]),
+            ([9],[26,31],[start_jingjia_rice_radar]),
             ([9],[30 + i * 2 for i in range(29 // 2 + 1)],[start_financial_radar_system]),
             ([11],[i * 3 for i in range(30 // 3 + 1)],[start_financial_radar_system]),
             ([10,13,14],[i * 3 for i in range(59 // 3 + 1)],[start_financial_radar_system]),

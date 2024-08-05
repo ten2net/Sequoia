@@ -30,7 +30,7 @@ class Account:
 
     def buy(self, code: str, price: float, stock_num: int) -> str:
         return self.trader.buy(code, price, stock_num)
-    def buy_batch(self, stock_prices: List[dict], position_ratio:float)->dict:
+    def buy_batch(self, stock_prices: dict, position_ratio:float)->dict:
         return self.trader.execute_buy(stock_prices, position_ratio)
 
     def sell(self, code: str, price: float, stock_num: int) -> str:

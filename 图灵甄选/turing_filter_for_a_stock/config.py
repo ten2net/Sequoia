@@ -1,6 +1,7 @@
 from radar.cci_88 import CCIStockRadar
 # from radar.del_test import DelTest
 from radar.hot_symbols import HotSymbolStockRadar
+from radar.jingjia_rise_event import JingJiaRiseStockRadar
 from radar.large_buy_event import LargeBuyStockRadar
 from radar.ta_kline_style import KLineStyleStockRadar
 # 后期维护主要工作：
@@ -12,5 +13,9 @@ stock_radares = [
     # KLineStyleStockRadar(name="K线异常", threshold=0, topN =200),
     # CCIStockRadar(name="斐纳斯强势300", cci_threshold=300),
     LargeBuyStockRadar(name="大笔买入", topN =22),
+    HotSymbolStockRadar(name="热股强势", topN =22),
+]
+jinjia_stock_radares = [
+    JingJiaRiseStockRadar(name="竞价上涨", topN =22),
     HotSymbolStockRadar(name="热股强势", topN =22),
 ]

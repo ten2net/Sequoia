@@ -4,7 +4,7 @@ import pandas as pd
 
 
 class SymbolFilter(StockFilter):
-    def __init__(self, not_allowed_prefixes: List[str] = ['4', '8', '68']):
+    def __init__(self, not_allowed_prefixes: List[str] = ['4', '8', '9' , '68']):
         """
         两市剔除科创板股、北交所股
         """

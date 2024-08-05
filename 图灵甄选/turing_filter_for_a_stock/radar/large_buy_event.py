@@ -130,7 +130,7 @@ class LargeBuyStockRadar(StockRadar):
                         if row['pct'] > 5  :   # 已持仓的股票当前涨幅5%以上的不再补仓
                             not_needed_add_position.append(row['code'])
                 # 8.2.2、买入逻辑        
-                if ganzhou_index >= 0.05:      # 开仓条件。情绪不是太差，才可以开仓 
+                if ganzhou_index > 0.02:      # 开仓条件。情绪不是太差，才可以开仓 
                     now = datetime.now()
                     if now.hour >= 10:  # 上午10点后，只追离涨停还有7%以上上涨空间的股票，10点前只追离涨停还有2%以上上涨空间的股票
                         df = df[((df['upper_limit_y'] - df["close"]) / df['upper_limit_y']) > 0.07 ]                    

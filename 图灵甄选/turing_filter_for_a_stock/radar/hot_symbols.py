@@ -138,7 +138,7 @@ class HotSymbolStockRadar(StockRadar):
                                 not_needed_add_position.append(row['code'])
                     
                     # 8.2.2、买入逻辑                            
-                    if ganzhou_index >= -0.05:      # 开仓条件。情绪不是太差，才可以开仓 
+                    if ganzhou_index > 0.02:      # 开仓条件。情绪不是太差，才可以开仓 
                         now = datetime.now()
                         df['upper_rate'] = df['code'].apply(lambda x: 20 if (x.startswith('3') or x.startswith('68'))  else 10)
                         

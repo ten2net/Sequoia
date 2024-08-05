@@ -80,7 +80,7 @@ class StockFavorManagement:
         if -0.1 < position_ratio < 0 and (float(balance_info['market_value']) /float(balance_info['total_money'])) > 0.5:
             return {}
         # 计算单次买入金额
-        buy_amount_per_stock = float(balance_info['can_use_money']) * position_ratio // len(stock_prices)
+        buy_amount_per_stock =  float(balance_info['can_use_money']) * position_ratio // len(stock_prices.items())
         
         # 计算每只股票的买入数量
         transactions = {}

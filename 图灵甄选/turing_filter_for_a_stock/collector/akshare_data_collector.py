@@ -273,6 +273,7 @@ class AkshareDataCollector(DataCollector):
         for index,row in industry_df.iterrows():  
             if index < 8:   # 热门行业前8个
                 stock_df = ak.stock_board_industry_cons_em(symbol=row['板块名称'])
+                stock_df = stock_df[stock_df['代码'].astype(str).str[:1].isin(['0','3','6'])] 
                 stock_df=stock_df.head(k)
                 for index2,row2 in stock_df.iterrows(): 
                     df = ak.stock_zh_a_hist_pre_min_em(symbol=row2['代码'], start_time="09:00:00")

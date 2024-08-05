@@ -230,7 +230,7 @@ class Trader:
             print(msg)
             return None
 
-    def execute_buy(self, stock_prices: List[dict], position_ratio:float):
+    def execute_buy(self, stock_prices: dict, position_ratio:float):
         """
         执行买入操作的函数。        
 
@@ -255,7 +255,8 @@ class Trader:
         if -0.1 < position_ratio < 0 and (float(balance_info['market_value']) /float(balance_info['total_money'])) > 0.5:
             return {}
         # 计算单次买入金额
-        buy_amount_per_stock = float(balance_info['can_use_money']) * position_ratio // len(stock_prices)
+        print(stock_prices)
+        buy_amount_per_stock = float(balance_info['can_use_money']) * position_ratio // len(stock_prices.items())
         
         # 计算每只股票的买入数量
         transactions = {}
