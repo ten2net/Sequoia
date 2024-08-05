@@ -159,10 +159,11 @@ def add_symbols_to_group(
             raise Exception(f"could not find group:{group_name}")
     codeList = [to_eastmoney_code(code, entity_type=entity_type) for code in codes]
     codeList = ",".join(codeList)
+    # print(codes)
     # print(codeList)
     ts = current_timestamp()
     url = f"http://myfavor.eastmoney.com/v4/webouter/aslot?appkey={APIKEY}&cb=jQuery112404771026622113468_{ts - 10}&g={group_id}&scs={codeList}&_={ts}"
-
+    resp = None
     if session:
         resp = session.get(url, headers=HEADER)
     else:
@@ -222,6 +223,7 @@ def add_to_group(
     ts = current_timestamp()
     url = f"http://myfavor.eastmoney.com/v4/webouter/as?appkey={APIKEY}&cb=jQuery112404771026622113468_{ts - 10}&g={group_id}&sc={code}&_={ts}"
 
+    resp = None
     if session:
         resp = session.get(url, headers=HEADER)
     else:
@@ -323,14 +325,11 @@ def get_can_cancel_order():
     }
     resp = requests.get(url, headers=HEADER_NOW)
     if resp.status_code == 200:
-        print(resp.status_code )
         result = resp.text
-        # print(result)
         js_text = result[result.index("(") + 1: result.index(")")]
         ret = demjson3.decode(js_text)
         data = ret.get("data") 
         msg = ret.get("message")        
-        print(msg)        
         data =[{"code":item['stkCode'],"name":item['stkName'],"orderType":item['orderType'],"mmflag":item['mmflag'],"order_no":item['wth']} for item in data]
         return data
     else:
@@ -338,7 +337,6 @@ def get_can_cancel_order():
         # js_text = result[result.index("(") + 1: result.index(")")]
         ret = demjson3.decode(result)
         msg = ret.get("error")        
-        print(msg)
         return None 
 def get_position():
     ts = current_timestamp()
@@ -358,7 +356,6 @@ def get_position():
     }
     resp = requests.get(url, headers=HEADER_NOW)
     if resp.status_code == 200:
-        print(resp.status_code )
         result = resp.text
         # print(result)
         js_text = result[result.index("(") + 1: result.index(")")]
@@ -372,7 +369,6 @@ def get_position():
         js_text = result[result.index("(") + 1: result.index(")")]
         ret = demjson3.decode(js_text)
         msg = ret.get("message")        
-        print(msg)
         return None 
 def get_balance_info() ->dict:
     ts = current_timestamp()
@@ -392,7 +388,6 @@ def get_balance_info() ->dict:
     }
     resp = requests.get(url, headers=HEADER_NOW)
     if resp.status_code == 200:
-        print(resp.status_code )
         result = resp.text
         # print(result)
         js_text = result[result.index("(") + 1: result.index(")")]
@@ -406,7 +401,6 @@ def get_balance_info() ->dict:
         js_text = result[result.index("(") + 1: result.index(")")]
         ret = demjson3.decode(js_text)
         msg = ret.get("message")        
-        print(msg)
         return None 
 
 def to_eastmoney_code(code, entity_type="stock"):
@@ -444,7 +438,7 @@ def update_em_favor_list(symbol_list:list[str],group_full_name:str ,group_new_na
     # 添加自选 
     group_name_list = [group_new_name,group_full_name] 
     for group_name in group_name_list:       
-       print(add_symbols_to_group(symbol_list, group_name=group_name, entity_type="stock"))
+       add_symbols_to_group(symbol_list, group_name=group_name, entity_type="stock")
 
 __all__ = [
     "create_group",
