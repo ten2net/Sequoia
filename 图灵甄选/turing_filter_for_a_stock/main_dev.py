@@ -9,7 +9,6 @@ import argparse
 import threading
 from config import stock_radares,jinjia_stock_radares,dev_stock_radares
 from radar.hot_symbols import HotSymbolStockRadar
-from radar.jingjia_rise_event import JingJiaRiseStockRadar
 from trader.trader_management import SimTraderManagement
 
 def next_exec_seconds(hour=9, minute=26):

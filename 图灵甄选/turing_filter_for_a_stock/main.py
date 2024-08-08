@@ -7,9 +7,7 @@ import schedule
 from tqdm import tqdm
 import argparse
 import threading
-from config import stock_radares,jinjia_stock_radares,dev_stock_radares
-from radar.hot_symbols import HotSymbolStockRadar
-from radar.jingjia_rise_event import JingJiaRiseStockRadar
+from config import stock_radares,jinjia_stock_radares
 from trader.trader_management import SimTraderManagement
 
 def next_exec_seconds(hour=9, minute=26):
@@ -48,16 +46,6 @@ def start_jingjia_rice_radar():
     # 等待所有线程完成
     for thread in threads:
         thread.join()    
-def start_dev_radar():
-    threads = []
-    for radar in dev_stock_radares:
-        thread = threading.Thread(target=radar.startup)
-        thread.start()  # 启动线程
-        threads.append(thread)
-    # 等待所有线程完成
-    for thread in threads:
-        thread.join()    
-    
 def main():
     parser = argparse.ArgumentParser(description="处理命令行参数")
     parser.add_argument('--dev', action='store_true',
@@ -69,8 +57,8 @@ def main():
     os.environ.pop("WECOM_GROUP_BOT_KEYS")       
     load_dotenv() 
     
-    # stm = SimTraderManagement()  # 模拟交易管理
-    # stm.startWatch()      
+    stm = SimTraderManagement()  # 模拟交易管理
+    stm.startWatch()      
 
     if args.dev:
         start_financial_radar_system()
