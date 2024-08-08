@@ -72,7 +72,7 @@ class Trader:
         else:
             return f"请求失败！状态码：{resp.status_code}.{resp.content},{url}"
 
-    def create_group(self, groupName: str, desc: str="API", authority:Literal[0, 1] = 0) -> str:
+    def create_account(self, groupName: str, desc: str="API", authority:Literal[0, 1] = 0) -> str:
         order_type = "spo_create_zuhe"  #创建投资组合
         params: dict = {
             "type": order_type,
