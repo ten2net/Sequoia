@@ -64,8 +64,6 @@ def get_groups(session: Session = None):
     ts = current_timestamp()
     ts_10 = ts -10
     url = f"http://myfavor.eastmoney.com/v4/webouter/ggdefstkindexinfos?appkey={APIKEY}&cb=jQuery112407703233916827181_{ts_10}&g=1&_={ts}"
-    # HEADER['Referer']='https://quote.eastmoney.com/zixuan/'
-    # HEADER['Cookie']="ct=TlTpWFhvjSJKB95m_keQV3dU_4GXll7NbyCQnkMGdSCRVm8ybxSZsqA_K5GPiHA_uaR80-iTSizqjvjSBqVG37kzLusjCOujGJ1PKksZUAY9ZQYgUqDo28AYNKA-cAJEHGDSiUBCEB9LEkt2hXmuHeU_9MXH9ErhOLs8pNgPQaI; ut=FobyicMgeV5AOMzpK3bVzMa2WswQh_7dk0H2cN1bvyTyE3Rvuf4IG77pU0-4ek82Kb2AawujzMU-ZBjEz6qcCrKX1Bh5Ua2c8bnD750oR_Myse6easKbITaEy2xVsjjguEbLShEnCKETW5FZY_N-6WBwHYX5k3y2QIt1Z9hu_qSAFfp2XGV8db1znyAPNkhifl2Akn2dBcienYgNDj3LV6TU6FvVPhRDM3TglwS4UhA8GKerVFyCa_FuZuZiVPF8dHyQH353enuYjk7ZwyPFgorCwEBEZ4ZH;"
     if session:
         resp = session.get(url, headers=HEADER)
     else:
@@ -230,178 +228,6 @@ def add_to_group(
         resp = requests.get(url, headers=HEADER)
 
     return parse_resp(resp)
-def buy(code:str, price:float,stock_num:int)->str:
-    return commit_buy_or_sell_order(code, price,stock_num,'buy',order_type ="spo_order_limit")
-def sell(code:str, price:float,stock_num:int)->str:
-    return commit_buy_or_sell_order(code, price,stock_num,'sell',order_type ="spo_order_limit")
-def commit_buy_or_sell_order(code:str, price:float,stock_num:int,buy_or_sell:Literal['buy', 'sell'] = 'buy',order_type:Literal['spo_order', 'spo_order_limit'] = "spo_order")->str:
-    ts = current_timestamp()
-    userid='2090094314376082'
-
-    mktCode="1" if code.startswith("6") else "0"
-    zjzh="241990400000029517"
-    order_type="spo_order"  # spo_hold 持仓信息
-    mmfx="1" if buy_or_sell == 'buy'  else "2" # 1:买 2：卖
-    mmfx_zh="买入" if buy_or_sell == 'buy'  else "卖出" # 1:买 2：卖
-    
-    url = f"""https://simoper.eastmoney.com/oper_tzzh_v2?cb=jQuery1123026493533723791596_{ts - 10}&"""
-    url += f"""userid={userid}&"""
-    url += f"""zjzh={zjzh}&plat=2&ver=web20&"""
-    url += f"""type={order_type}&mmfx={mmfx}&mktCode={mktCode}&"""
-    url += f"""stkCode={code}&price={price}&wtsl={stock_num}&"""
-    url += f"""r=9633477&_={ts}"""
-    
-    hd ="ct=RMw3jGQaWkKGz7v-DWWT-7G5pseKYoUAKCTo7nodiuc6r2wAgK_cGVYZg7WgnSRc8vLqXo96GiM5xZqn4HcgaZfkto1FFp9vWf5zY-tMJcWGRwLhIRtUFHMTb5nPyRYgP5yMvmC_VbXTZPx0XoL8XX_doVToX0x3VFomieXL98g; ut=FobyicMgeV7JB-nm6VZO-UUwigGmwZjvb9fFo6XVFphAB_tT-zJaKYv5-XvwIJapoJk8c6XLhbUn0JXDpCcLMhJtr_RkKChrx-GWuGUaxkFQmuBVK8hpClmiyU0vb_qQMqrXJw1aN43bapSm-lXpst5ZNoj6MH-N4sKuo2_KihUvoUYYGiB1iXGFM4FEuaCitSmpsM3cROAuMENGATxJR_lQ4HwNYIXhPc1jGwb7KyMta8QsdhYcKGOiHRxO_ASCJVt0kPFZSi1eDMBlU6pctRa2z34O4olufeQ2PIwAUHyUYyBPXwZTvts7YOqiPIW_NeepykUsfVNF0VgGIICQEKGMLTZ3vvYjns9on9IYHwZOCi8Y7SvTPL0XDrdeB8Vmj-FpMelG9-bkXHPaf6xfXFKxSg9ocCW0XbM1q0PtqRnVLLuvqxzMCRaiWxe7cW1wLgLoKEepXZU8zu9Kxr_Bih9zTZp9gROoPDnW1NGM4Cq3VvPG4BC05wm2I1KjOa_A3BL9sXcI5H8;"
-    HEADER_NOW = {
-        'Referer':'https://group.eastmoney.com/room/index.html',
-        'Cookie':hd
-    }
-    resp = requests.get(url, headers=HEADER_NOW)
-    if resp.status_code == 200:
-        result = resp.text
-        js_text = result[result.index("(") + 1: result.index(")")]
-        ret = demjson3.decode(js_text)
-        result = ret.get("result") 
-        if result == 0:
-            return f"{mmfx_zh}{code}, 下单成功"
-        else:
-            msg = ret.get("message")     
-            return f"{mmfx_zh}{code}, 下单失败! 原因：{msg} {url}"
-    else:
-        return f"请求失败！状态码：{resp.status_code}. {resp.content} {url}"
-    
-def cancel_order(code:str,order_no:str)->str:
-    # 
-    ts = current_timestamp()
-    userid='2090094314376082'
-    
-    
-    mktCode="1" if code.startswith("6") else "0"
-    zjzh="241990400000029517"
-    # wth='242100200000068562'
-    wth=order_no
-    order_type="spo_cancel"  # 撤单
-    mmfx="1"
-    
-    url = f"""https://simoper.eastmoney.com/oper_tzzh_v2?cb=jQuery1123026493533723791596_{ts - 10}&"""
-    url += f"""userid={userid}&"""
-    url += f"""zjzh={zjzh}&plat=2&ver=web20&"""
-    url += f"""wth={wth}&"""
-    url += f"""type={order_type}&mmfx={mmfx}&mktCode={mktCode}&"""
-    url += f"""stkCode={code}&"""
-    url += f"""r=9633477&_={ts}"""
-    
-    hd ="ct=RMw3jGQaWkKGz7v-DWWT-7G5pseKYoUAKCTo7nodiuc6r2wAgK_cGVYZg7WgnSRc8vLqXo96GiM5xZqn4HcgaZfkto1FFp9vWf5zY-tMJcWGRwLhIRtUFHMTb5nPyRYgP5yMvmC_VbXTZPx0XoL8XX_doVToX0x3VFomieXL98g; ut=FobyicMgeV7JB-nm6VZO-UUwigGmwZjvb9fFo6XVFphAB_tT-zJaKYv5-XvwIJapoJk8c6XLhbUn0JXDpCcLMhJtr_RkKChrx-GWuGUaxkFQmuBVK8hpClmiyU0vb_qQMqrXJw1aN43bapSm-lXpst5ZNoj6MH-N4sKuo2_KihUvoUYYGiB1iXGFM4FEuaCitSmpsM3cROAuMENGATxJR_lQ4HwNYIXhPc1jGwb7KyMta8QsdhYcKGOiHRxO_ASCJVt0kPFZSi1eDMBlU6pctRa2z34O4olufeQ2PIwAUHyUYyBPXwZTvts7YOqiPIW_NeepykUsfVNF0VgGIICQEKGMLTZ3vvYjns9on9IYHwZOCi8Y7SvTPL0XDrdeB8Vmj-FpMelG9-bkXHPaf6xfXFKxSg9ocCW0XbM1q0PtqRnVLLuvqxzMCRaiWxe7cW1wLgLoKEepXZU8zu9Kxr_Bih9zTZp9gROoPDnW1NGM4Cq3VvPG4BC05wm2I1KjOa_A3BL9sXcI5H8;"
-    HEADER_NOW = {
-        'Referer':'https://group.eastmoney.com/room/index.html',
-        'Cookie':hd
-    }
-    resp = requests.get(url, headers=HEADER_NOW)
-    
-    result = resp.text
-    js_text = result[result.index("(") + 1: result.index(")")]
-    ret = demjson3.decode(js_text)
-    result = ret.get("result") 
-    if result == 0:
-        return "撤单成功"
-    else:
-        msg = ret.get("message")     
-        return f"撤单失败! 原因：{msg}"
-def get_can_cancel_order():
-    ts = current_timestamp()
-    userid='2090094314376082'
-    zjzh="241990400000029517"
-    order_type="spo_orders_cancel"  # 挂单信息
-    url = f"""https://simoper.eastmoney.com/oper_tzzh_v2?cb=jQuery1123026493533723791596_{ts - 10}&"""
-    url+= f"""userid={userid}&"""
-    url+= f"""zjzh={zjzh}&plat=2&ver=web20&"""
-    url+= f"""type={order_type}&"""
-    url+= f"""r=9633477&_={ts}"""
-    
-    hd ="ct=RMw3jGQaWkKGz7v-DWWT-7G5pseKYoUAKCTo7nodiuc6r2wAgK_cGVYZg7WgnSRc8vLqXo96GiM5xZqn4HcgaZfkto1FFp9vWf5zY-tMJcWGRwLhIRtUFHMTb5nPyRYgP5yMvmC_VbXTZPx0XoL8XX_doVToX0x3VFomieXL98g; ut=FobyicMgeV7JB-nm6VZO-UUwigGmwZjvb9fFo6XVFphAB_tT-zJaKYv5-XvwIJapoJk8c6XLhbUn0JXDpCcLMhJtr_RkKChrx-GWuGUaxkFQmuBVK8hpClmiyU0vb_qQMqrXJw1aN43bapSm-lXpst5ZNoj6MH-N4sKuo2_KihUvoUYYGiB1iXGFM4FEuaCitSmpsM3cROAuMENGATxJR_lQ4HwNYIXhPc1jGwb7KyMta8QsdhYcKGOiHRxO_ASCJVt0kPFZSi1eDMBlU6pctRa2z34O4olufeQ2PIwAUHyUYyBPXwZTvts7YOqiPIW_NeepykUsfVNF0VgGIICQEKGMLTZ3vvYjns9on9IYHwZOCi8Y7SvTPL0XDrdeB8Vmj-FpMelG9-bkXHPaf6xfXFKxSg9ocCW0XbM1q0PtqRnVLLuvqxzMCRaiWxe7cW1wLgLoKEepXZU8zu9Kxr_Bih9zTZp9gROoPDnW1NGM4Cq3VvPG4BC05wm2I1KjOa_A3BL9sXcI5H8;"
-    HEADER_NOW = {
-        'Referer':'https://group.eastmoney.com/room/index.html',
-        'Cookie':hd
-    }
-    resp = requests.get(url, headers=HEADER_NOW)
-    if resp.status_code == 200:
-        result = resp.text
-        js_text = result[result.index("(") + 1: result.index(")")]
-        ret = demjson3.decode(js_text)
-        data = ret.get("data") 
-        msg = ret.get("message")        
-        data =[{"code":item['stkCode'],"name":item['stkName'],"orderType":item['orderType'],"mmflag":item['mmflag'],"order_no":item['wth']} for item in data]
-        return data
-    else:
-        result = resp.text
-        # js_text = result[result.index("(") + 1: result.index(")")]
-        ret = demjson3.decode(result)
-        msg = ret.get("error")        
-        return None 
-def get_position():
-    ts = current_timestamp()
-    userid='2090094314376082'
-    zjzh="241990400000029517"
-    order_type="spo_hold"  # spo_hold 持仓信息
-    url = f"""https://simoper.eastmoney.com/oper_tzzh_v2?cb=jQuery1123026493533723791596_{ts - 10}&"""
-    url+= f"""userid={userid}&"""
-    url+= f"""zjzh={zjzh}&plat=2&ver=web20&"""
-    url+= f"""type={order_type}&"""
-    url+= f"""r=9633477&_={ts}"""
-    
-    hd ="ct=RMw3jGQaWkKGz7v-DWWT-7G5pseKYoUAKCTo7nodiuc6r2wAgK_cGVYZg7WgnSRc8vLqXo96GiM5xZqn4HcgaZfkto1FFp9vWf5zY-tMJcWGRwLhIRtUFHMTb5nPyRYgP5yMvmC_VbXTZPx0XoL8XX_doVToX0x3VFomieXL98g; ut=FobyicMgeV7JB-nm6VZO-UUwigGmwZjvb9fFo6XVFphAB_tT-zJaKYv5-XvwIJapoJk8c6XLhbUn0JXDpCcLMhJtr_RkKChrx-GWuGUaxkFQmuBVK8hpClmiyU0vb_qQMqrXJw1aN43bapSm-lXpst5ZNoj6MH-N4sKuo2_KihUvoUYYGiB1iXGFM4FEuaCitSmpsM3cROAuMENGATxJR_lQ4HwNYIXhPc1jGwb7KyMta8QsdhYcKGOiHRxO_ASCJVt0kPFZSi1eDMBlU6pctRa2z34O4olufeQ2PIwAUHyUYyBPXwZTvts7YOqiPIW_NeepykUsfVNF0VgGIICQEKGMLTZ3vvYjns9on9IYHwZOCi8Y7SvTPL0XDrdeB8Vmj-FpMelG9-bkXHPaf6xfXFKxSg9ocCW0XbM1q0PtqRnVLLuvqxzMCRaiWxe7cW1wLgLoKEepXZU8zu9Kxr_Bih9zTZp9gROoPDnW1NGM4Cq3VvPG4BC05wm2I1KjOa_A3BL9sXcI5H8;"
-    HEADER_NOW = {
-        'Referer':'https://group.eastmoney.com/room/index.html',
-        'Cookie':hd
-    }
-    resp = requests.get(url, headers=HEADER_NOW)
-    if resp.status_code == 200:
-        result = resp.text
-        # print(result)
-        js_text = result[result.index("(") + 1: result.index(")")]
-        ret = demjson3.decode(js_text)
-        data = ret.get("data") 
-        msg = ret.get("message")        
-        data =[{"code":item['stkCode'],"name":item['stkName'],"quantity":int(item['zqsl']),"quantity_can_use":int(item['kysl']),"purchase_price":float(item['cbj'])} for item in data]
-        return data
-    else:
-        result = resp.text
-        js_text = result[result.index("(") + 1: result.index(")")]
-        ret = demjson3.decode(js_text)
-        msg = ret.get("message")        
-        return None 
-def get_balance_info() ->dict:
-    ts = current_timestamp()
-    userid='2090094314376082'
-    zjzh="241990400000029517"
-    order_type="spo_bal_info"  # spo_bal_info 账户信息
-    url = f"""https://simoper.eastmoney.com/oper_tzzh_v2?cb=jQuery1123026493533723791596_{ts - 10}&"""
-    url+= f"""userid={userid}&"""
-    url+= f"""zjzh={zjzh}&plat=2&ver=web20&"""
-    url+= f"""type={order_type}&"""
-    url+= f"""r=9633477&_={ts}"""
-    
-    hd ="ct=RMw3jGQaWkKGz7v-DWWT-7G5pseKYoUAKCTo7nodiuc6r2wAgK_cGVYZg7WgnSRc8vLqXo96GiM5xZqn4HcgaZfkto1FFp9vWf5zY-tMJcWGRwLhIRtUFHMTb5nPyRYgP5yMvmC_VbXTZPx0XoL8XX_doVToX0x3VFomieXL98g; ut=FobyicMgeV7JB-nm6VZO-UUwigGmwZjvb9fFo6XVFphAB_tT-zJaKYv5-XvwIJapoJk8c6XLhbUn0JXDpCcLMhJtr_RkKChrx-GWuGUaxkFQmuBVK8hpClmiyU0vb_qQMqrXJw1aN43bapSm-lXpst5ZNoj6MH-N4sKuo2_KihUvoUYYGiB1iXGFM4FEuaCitSmpsM3cROAuMENGATxJR_lQ4HwNYIXhPc1jGwb7KyMta8QsdhYcKGOiHRxO_ASCJVt0kPFZSi1eDMBlU6pctRa2z34O4olufeQ2PIwAUHyUYyBPXwZTvts7YOqiPIW_NeepykUsfVNF0VgGIICQEKGMLTZ3vvYjns9on9IYHwZOCi8Y7SvTPL0XDrdeB8Vmj-FpMelG9-bkXHPaf6xfXFKxSg9ocCW0XbM1q0PtqRnVLLuvqxzMCRaiWxe7cW1wLgLoKEepXZU8zu9Kxr_Bih9zTZp9gROoPDnW1NGM4Cq3VvPG4BC05wm2I1KjOa_A3BL9sXcI5H8;"
-    HEADER_NOW = {
-        'Referer':'https://group.eastmoney.com/room/index.html',
-        'Cookie':hd
-    }
-    resp = requests.get(url, headers=HEADER_NOW)
-    if resp.status_code == 200:
-        result = resp.text
-        # print(result)
-        js_text = result[result.index("(") + 1: result.index(")")]
-        ret = demjson3.decode(js_text)
-        data = ret.get("data") 
-        # [{'fdyk': '-839.17', 'fdykRat': '-0.30', 'kyye': '650368.12', 'mktVal': '348792.72', 'sdje': '74128.72', 'zhName': '', 'zjzh': '241990400000029517', 'zzc': '999160.83'}]     
-        data =[{"account":item['zjzh'],"total_money":float(item['zzc']),"account_pct":float(item['fdykRat']),"account_return":float(item['fdyk']),"market_value":float(item['mktVal']),"can_use_money":float(item['kyye']),"freeze_money":float(item['sdje'])} for item in data]
-        return data[0]
-    else:
-        result = resp.text
-        js_text = result[result.index("(") + 1: result.index(")")]
-        ret = demjson3.decode(js_text)
-        msg = ret.get("message")        
-        return None 
 
 def to_eastmoney_code(code, entity_type="stock"):
     if entity_type == "stock":
@@ -500,22 +326,7 @@ if __name__ == "__main__":
     # print(buy(code = "603270",price = 19.40, stock_num=300 ) )
     # print(sell(code = "000099",price = 18.40, stock_num=100.0 ) )
     # print(get_can_cancel_order())
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+ 
     
     # order_type="spo_order"
     # type: spo_zuhe_preview
@@ -527,44 +338,5 @@ if __name__ == "__main__":
     # spo_orders_cancel  挂单
     # spo_orders_all 当日委托
     # spo_deal_today 当日成交
-        
-    # qgqp_b_id=106944163fc0ce0e2d79fe93ec6380a2; 
-    # HAList=ty-1-603777-%u6765%u4F0A%u4EFD; 
-    # mtp=1; 
-    # sid=125682373; 
-    # vtpst=|; 
-    # st_si=61900645936017;
-    # p_origin=https%3A%2F%2Fpassport2.eastmoney.com; 
-    # st_asi=delete; 
-    # ct=RMw3jGQaWkKGz7v-DWWT-7G5pseKYoUAKCTo7nodiuc6r2wAgK_cGVYZg7WgnSRc8vLqXo96GiM5xZqn4HcgaZfkto1FFp9vWf5zY-tMJcWGRwLhIRtUFHMTb5nPyRYgP5yMvmC_VbXTZPx0XoL8XX_doVToX0x3VFomieXL98g; ut=FobyicMgeV7JB-nm6VZO-UUwigGmwZjvb9fFo6XVFphAB_tT-zJaKYv5-XvwIJapoJk8c6XLhbUn0JXDpCcLMhJtr_RkKChrx-GWuGUaxkFQmuBVK8hpClmiyU0vb_qQMqrXJw1aN43bapSm-lXpst5ZNoj6MH-N4sKuo2_KihUvoUYYGiB1iXGFM4FEuaCitSmpsM3cROAuMENGATxJR_lQ4HwNYIXhPc1jGwb7KyMta8QsdhYcKGOiHRxO_ASCJVt0kPFZSi1eDMBlU6pctRa2z34O4olufeQ2PIwAUHyUYyBPXwZTvts7YOqiPIW_NeepykUsfVNF0VgGIICQEKGMLTZ3vvYjns9on9IYHwZOCi8Y7SvTPL0XDrdeB8Vmj-FpMelG9-bkXHPaf6xfXFKxSg9ocCW0XbM1q0PtqRnVLLuvqxzMCRaiWxe7cW1wLgLoKEepXZU8zu9Kxr_Bih9zTZp9gROoPDnW1NGM4Cq3VvPG4BC05wm2I1KjOa_A3BL9sXcI5H8; 
-    # pi=2090094314376082%3Bm2090094314376082%3B%E8%82%A1%E5%8F%8B6L2020T796%3Bb9%2Ba%2Fdq8lFXF6%2BWEcRDkAxfEkaTZFBDhjcWzxzu717XBF1eXD8xow8cFqzODakfF8yUzUWcKdOn4632m85VsJmE%2B6O5kwLEkojaWkbzVpda%2BRsZSI4bw6TON7ha0ur%2Fgmb8rsilCPHMdkv9KUWckoWG1ff15kzH8d9dUU3rOlcRGKU4HWHxaW%2FtCyJ0p796nZekyCJMQ%3Be%2BFnc4R63uc8uDE2WM%2BZmtFS4X2IfyOM2mIY9IC4iQB6KV7SsPPCxphegpJb0TuxBg8lKpWCyudP425IE8L%2Bxx0UNAxtrcAVDpNX1J8NDfNU0SIfXqEzP5rnR9kGYkiLPw5PGT5OF9VHG08dH9h2jIDf8nyTRQ%3D%3D; uidal=2090094314376082%e8%82%a1%e5%8f%8b6L2020T796; rskey=W1xC3OGIwYTJ1eTJIOWlBUm8vbVlQVElOdz09WFt9j; st_pvi=41425149047457; st_sp=2024-07-29%2007%3A17%3A57; st_inirUrl=http%3A%2F%2Fguba.eastmoney.com%2F; st_sn=268; st_psi=20240729083616468-113200301712-2442525922    
-    # {
-    #     "cmtReal": "甘州图灵932",
-    #     "comment": "甘州图灵932",
-    #     "concerned": 0,
-    #     "dealRate": 0,
-    #     "dealWinCnt": 0,
-    #     "dealfailCnt": 0,
-    #     "introAuditSt": 2,
-    #     "nameAuditSt": 2,
-    #     "ownZuhe": 2,
-    #     "permit": 0,
-    #     "plate_group": [],
-    #     "portfRat": 0,
-    #     "rank_type": [],
-    #     "startDate": "2024年07月18日",
-    #     "syl_20r": 0,
-    #     "syl_250r": 0,
-    #     "syl_5r": 0,
-    #     "syl_dr": 0,
-    #     "userid": 2090094314376082,
-    #     "username": "股友6L2020T796",
-    #     "visitors": 2,
-    #     "zhmcReal": "甘州图灵",
-    #     "zsyl": 0,
-    #     "zuheName": "甘州图灵",
-    #     "zuhe_desc_flg": 4,
-    #     "zuhe_name_flg": 4,
-    #     "zzc": 1000000
-    # }      
+     
 
