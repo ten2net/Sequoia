@@ -69,19 +69,18 @@ def main():
     os.environ.pop("WECOM_GROUP_BOT_KEYS")       
     load_dotenv() 
     
-    # stm = SimTraderManagement()  # 模拟交易管理
-    # stm.startWatch()      
+    stm = SimTraderManagement()  # 模拟交易管理
+    stm.startWatch()      
 
     if args.dev:
-        start_financial_radar_system()
-        start_jingjia_rice_radar()
+        start_dev_radar()
     else:
         pbar_list = []
         task_cron_config=[
-            ([9],[26,28,31],[start_jingjia_rice_radar]),
-            ([9],[30 + i * 2 for i in range(29 // 2 + 1)],[start_financial_radar_system]),
-            ([11],[i * 3 for i in range(30 // 3 + 1)],[start_financial_radar_system]),
-            ([10,13,14],[i * 3 for i in range(59 // 3 + 1)],[start_financial_radar_system]),
+            ([9],[26,28,31],[start_dev_radar]),
+            ([9],[30 + i * 2 for i in range(29 // 2 + 1)],[start_dev_radar]),
+            ([11],[i * 3 for i in range(30 // 3 + 1)],[start_dev_radar]),
+            ([10,13,14],[i * 3 for i in range(59 // 3 + 1)],[start_dev_radar]),
         ]
         for cron_config in task_cron_config:
             hours = cron_config[0]

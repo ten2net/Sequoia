@@ -161,3 +161,4 @@ class LargeBuyStockRadar(StockRadar):
             wecom_msg_enabled= os.environ.get('WECOM_MSG_ENABLED').lower() == 'true'
             if wecom_msg_enabled and df.shape[0] > 0:
                 WeComNotification().send_stock_df(title=self.name, df=df, ganzhou_index=ganzhou_index)
+

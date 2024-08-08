@@ -116,7 +116,7 @@ class HotSymbolStockRadar(StockRadar):
                             sell_price = max(round(row['close'] * 0.995 , 2) ,row["lower_limit"])  # 确保尽量能出手
                             if math.isnan(sell_price):  # 对于停牌股票的卖出策略，临时先这样处理：涨8个点卖出
                                 sell_price = row['close_yesterday'] + 0.08 * row['close_yesterday']
-                            print(sell_price,row['code'],quantity_can_use,row['close'],row["lower_limit"], row['close_yesterday'])
+                            # print(sell_price,row['code'],quantity_can_use,row['close'],row["lower_limit"], row['close_yesterday'])
                             if ganzhou_index < 0.05 :   # 情绪太差，一键清仓
                                 print(account.sell(code=row['code'], price=sell_price, stock_num=quantity_can_use))
                                 selled.append(row['code'])                    
@@ -172,7 +172,7 @@ class HotSymbolStockRadar(StockRadar):
                         
                         # 9.3、模拟盘，上午开盘，买入8大行业先锋股前
                         now = datetime.now()
-                        if now.hour == 9 and now.minute <=35:  # 上午开盘，买入8大行业先锋股前
+                        if now.hour == 9 and now.minute <=36:  # 上午开盘，买入8大行业先锋股前
                             account_manager = AccountManagement()
                             accounts = account_manager.get_accounts()
                             for account in accounts:  

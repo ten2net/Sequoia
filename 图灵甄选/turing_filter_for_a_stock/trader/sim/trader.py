@@ -55,7 +55,7 @@ class Trader:
             "mktCode": mktCode,
             "stkCode": code,
             "price":price,
-            "wtsl":stock_num
+            "wtsl":math.floor(stock_num)
         }
         url = self.build_url(params)
         resp = requests.get(url, headers=self.header)
