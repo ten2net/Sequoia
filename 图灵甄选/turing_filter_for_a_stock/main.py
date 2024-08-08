@@ -61,7 +61,6 @@ def main():
     stm.startWatch()      
 
     if args.dev:
-        start_financial_radar_system()
         start_jingjia_rice_radar()
     else:
         pbar_list = []
