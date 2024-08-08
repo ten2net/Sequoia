@@ -59,13 +59,13 @@ class SimTraderManagement(TradeSignalHandler):
               df_hold['purchase_price'] = df_hold['purchase_price'].astype(float)
               
               # 过滤掉不能卖出的股票，避免废单
-              df_can_sell =df_hold[df_hold['quantity_can_use'] > 0]
+              df_can_sell =df_hold[df_hold['quantity_can_use'] > 0].copy()
               df_can_sell['upper_rate'] = df_can_sell['code'].apply(lambda x: 20 if (x.startswith('3') or x.startswith('68'))  else 10)
               df_can_sell = df_can_sell.merge(self.market_spot_df_all, on="code", how="left")
               for index, row in df_can_sell.iterrows():
                   # 一键清仓时不检查行情，更低价卖出
                   sell_price =max(round(row['close'] * 0.985, 2), row["lower_limit"]) if position_rate<0 else max(round(row['close'] * 0.995, 2), row["lower_limit"])  # 确保尽量能出手
-                  # 一键清仓时不检查行情，直接卖出                  
+                  # 当日停牌的股票 sell_price 为 nan，需要过滤掉
                   sell_signal =math.isnan(sell_price) if position_rate<0 else row['close'] < row['open'] or abs(row['pct'] - row['upper_rate']) >= 0.1 or math.isnan(sell_price)
                   if not sell_signal: continue
                   quantity_can_use = row['quantity_can_use'] * position_rate 
