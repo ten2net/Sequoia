@@ -1,5 +1,6 @@
 from core.constants import Constants
 from collector.akshare_data_collector import AkshareDataCollector
+from core.topic import FavorSignalTopic
 from filter.filter_chain import FilterChain
 from filter.fund.fund_filter import NameFilter, SymbolFilter, TotalCapitalFilter
 from filter.trading.amount_filter import AmountFilter
@@ -8,10 +9,10 @@ from filter.trading.volume_filter import HighVolumeFilter
 from kline.kline_style import KLineStyles, KLineStyles_cdls
 from notification.wecom import WeComNotification
 from radar.base import StockRadar
-from favor.favor import StockFavorManagement
 from pool.pool import AmountStockPool, FavorStockPool, HotRankStockPool
 from filter.trading.indictor_trading_filter import IndicatorTradingFilter
 import os
+from pubsub import pub
 from termcolor import colored
 
 class KLineStyleStockRadar(StockRadar):
@@ -77,11 +78,17 @@ class KLineStyleStockRadar(StockRadar):
             print(df[['name', 'close_to_sma5_pct', 'non_zero_count']][50:])           
             df = df.head(self.topN)
             print(colored(f"""{self.name}发现了 {df.shape[0]} 个目标：{df['name'].tolist()}""","green"))
-            # 9、更新自选股            
-            sfm = StockFavorManagement()
-            results =df['code'].tolist()
-            results =  results[::-1]  #确保新加自选的在上面
-            sfm.add_to_group(results, group_name=self.name)            
+            # 9、自选股
+            try:
+                results = df['code'].tolist()
+                results = results[::-1]  # 确保新加自选的在上面
+                favor_message={
+                  "group_name": self.name,
+                  "symbols": results
+                }
+                pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)
+            except Exception as e:
+                print(f'东方财富接口调用异常:{e}')             
             
             # 10、发送消息通知            
             wecom_msg_enabled= os.environ.get('WECOM_MSG_ENABLED').lower() == 'true'
