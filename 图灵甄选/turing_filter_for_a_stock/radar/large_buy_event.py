@@ -3,6 +3,7 @@ import math
 from typing import List
 from core.constants import Constants
 from collector.akshare_data_collector import AkshareDataCollector
+from core.topic import FavorSignalTopic, TradeSignalTopic
 from filter.filter_chain import FilterChain
 from filter.fund.fund_filter import NameFilter, SymbolFilter, TotalCapitalFilter
 from filter.trading.amount_filter import AmountFilter
@@ -10,15 +11,12 @@ from filter.trading.turnover_filter import TurnoverFilter
 from filter.trading.volume_filter import HighVolumeFilter
 from notification.wecom import WeComNotification
 from radar.base import StockRadar
-from favor.favor import FavorManager
 from pool.pool import LargeBuyStockPool
 from filter.trading.indictor_trading_filter import IndicatorTradingFilter
 import os
 from termcolor import colored
 from pubsub import pub
 from trader.base import OrderMessage
-from trader.trade_signal import TradeSignalTopic
-
 
 class LargeBuyStockRadar(StockRadar):
     def __init__(self,name:str="大笔买入", topN:int = 22):
@@ -62,6 +60,12 @@ class LargeBuyStockRadar(StockRadar):
         filter_chain = FilterChain(filters)
         df = filter_chain.apply(df)
         
+        df['upper_rate'] = df['code'].apply(lambda x: 20 if (
+            x.startswith('3') or x.startswith('68')) else 10)
+
+        df['space_limit'] = (
+            df['upper_limit_y'] - df["close"]) / df['upper_limit_y']         
+        
         if df.shape[0] == 0:
             print("无满足条件的股票！")
         else:
@@ -82,8 +86,11 @@ class LargeBuyStockRadar(StockRadar):
             try:
                 results = df['code'].tolist()
                 results = results[::-1]  # 确保新加自选的在上面
-                favorManager = FavorManager()
-                favorManager.update_favor(results, group_name=self.name)
+                favor_message={
+                  "group_name": self.name,
+                  "symbols": results
+                }
+                pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)
             except Exception as e:
                 print(f'东方财富接口调用异常:{e}')
             #10、交易信号生成，主程序中启动的模拟盘交易管理器SimTraderManagement负责侦听交易信号，实施交易

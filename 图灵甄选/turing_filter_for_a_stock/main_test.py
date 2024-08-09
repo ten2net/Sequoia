@@ -2,9 +2,9 @@ import os
 
 from dotenv import load_dotenv
 from account.account import AccountManagement
+from core.topic import FavorSignalTopic, TradeSignalTopic
 from trader.base import OrderMessage
 from trader.sim.trader import Trader
-from trader.trade_signal import TradeSignalTopic
 from trader.trader_management import SimTraderManagement
 from user.user_management import UserManagement
 from pubsub import pub
@@ -12,8 +12,10 @@ from pubsub import pub
 if __name__ == "__main__":
     os.environ.pop("EM_APPKEY")
     os.environ.pop("EM_HEADER")
-    os.environ.pop("WECOM_GROUP_BOT_KEYS")       
-    # os.environ.pop("SIM_TRADER_ACCOUNT")       
+    os.environ.pop("USER_CONFIG_LIST")
+    os.environ.pop("ACCOUNT_STRATEGT_MAPPING")
+    os.environ.pop("WECOM_GROUP_BOT_KEYS")    
+     
     load_dotenv() 
     
     # account_manager = AccountManagement()
@@ -77,7 +79,32 @@ if __name__ == "__main__":
     # pub.sendMessage(str(TradeSignalTopic.SELL_ALL),message=OrderMessage(strategyName="热股强势", symbol=None, price=None, pct=None ,index=0.5))
     # pub.sendMessage(str(TradeSignalTopic.SELL),message=OrderMessage(strategyName="热股强势", symbol=None, price=None, pct=None ,index=-0.001)) 
     # pub.sendMessage(str(TradeSignalTopic.SELL_HALF),message=OrderMessage(strategyName="热股强势", symbol=None, price=None, pct=None ,index=-0.001)) 
-    pub.sendMessage(str(TradeSignalTopic.SELL_QUARTER),message=OrderMessage(strategyName="热股强势", symbol=None, price=None, pct=None ,index=-0.001)) 
+    # pub.sendMessage(str(TradeSignalTopic.SELL_QUARTER),message=OrderMessage(strategyName="热股强势", symbol=None, price=None, pct=None ,index=-0.001)) 
+    
+    um = UserManagement() 
+    um.startWatch()
+    favor_message={
+      "group_name": "热股强势",
+      "symbols": ['000002','000001']
+    }
+    pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)   
+    
+    users = um.get_users()
+    for user in users:
+      pass
+      # print(user.username, 50 * "——")
+      # groups = user.favor.get_groups()
+      # print(groups)
+      # group_name = 'Test'
+      # group =user.favor.create_group(group_name)
+      # print(user.favor.rename_group(group['gid'],group_name+"123"))
+      # print(user.favor.del_group(group_name+"123"))
+      # group_name = '热股强势'
+      # print(user.favor.get_symbols(group_name))
+      
+      # print(user.favor.update_favor(['000002','000001'],"API"))
+      # print(user.favor.add_to_group(code='000002',group_name="API全"))
+      # print(user.favor.del_from_group(code='000002',group_name="API全"))
     
 
 

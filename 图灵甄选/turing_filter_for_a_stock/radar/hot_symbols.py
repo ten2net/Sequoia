@@ -3,19 +3,17 @@ import math
 from typing import List
 from core.constants import Constants
 from collector.akshare_data_collector import AkshareDataCollector
+from core.topic import FavorSignalTopic, TradeSignalTopic
 from filter.filter_chain import FilterChain
 from filter.fund.fund_filter import NameFilter, SymbolFilter, TotalCapitalFilter
 from filter.trading.amount_filter import AmountFilter
 from notification.wecom import WeComNotification
 from radar.base import StockRadar
-from favor.favor import FavorManager
 from pool.pool import HotSymbolStockPool
 import os
 from termcolor import colored
 from pubsub import pub
 from trader.base import OrderMessage
-from trader.trade_signal import TradeSignalTopic
-
 
 class HotSymbolStockRadar(StockRadar):
     def __init__(self, name: str = "热股强势", topN: int = 22):
@@ -90,8 +88,11 @@ class HotSymbolStockRadar(StockRadar):
             try:
                 results = df['code'].tolist()
                 results = results[::-1]  # 确保新加自选的在上面
-                favorManager = FavorManager()
-                favorManager.update_favor(results, group_name=self.name)
+                favor_message={
+                  "group_name": self.name,
+                  "symbols": results
+                }
+                pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)
             except Exception as e:
                 print(f'东方财富接口调用异常:{e}')
             #10、交易信号生成，主程序中启动的模拟盘交易管理器SimTraderManagement负责侦听交易信号，实施交易

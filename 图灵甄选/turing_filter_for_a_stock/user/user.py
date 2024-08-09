@@ -1,15 +1,22 @@
 import math
+import os
 from typing import List, Literal
 import demjson3
+from dotenv import load_dotenv
 import requests
 from urllib.parse import urlencode
 import time
 
 from account.trading_account import Account
+from favor.base import Favor
+from favor.favor import FavorForEM
 from trader.sim.trader import Trader
 class User:
     def __init__(self, user_config: dict):
         self.__dict__.update(user_config)
+        load_dotenv()
+        appkey = os.environ.get('EM_APPKEY')
+        self.favor:Favor = FavorForEM(appkey=appkey, token=self.em_token)
 
     def get_sim_token(self):
         return self.sim_token

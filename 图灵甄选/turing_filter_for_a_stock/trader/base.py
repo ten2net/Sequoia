@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List
 from pubsub import pub
-from trader.trade_signal import TradeSignalTopic
+
+from core.topic import TradeSignalTopic
 
 def subscribe_topic(topic_name):
     def decorator(callback):
