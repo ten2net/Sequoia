@@ -3,8 +3,6 @@ from typing import List, Optional
 from urllib.parse import urlencode
 
 from dotenv import load_dotenv
-from account.account import AccountManagement
-
 from favor.base import Favor
 import favor.em_favor_api as em
 import requests

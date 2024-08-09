@@ -1,7 +1,6 @@
 import os
 
 from dotenv import load_dotenv
-from account.account import AccountManagement
 from core.topic import FavorSignalTopic, TradeSignalTopic
 from pool.pool import FavorStockPool
 from trader.base import OrderMessage
@@ -19,17 +18,6 @@ if __name__ == "__main__":
      
     load_dotenv() 
     
-    # account_manager = AccountManagement()
-    # accounts = account_manager.get_accounts()
-    # for account in accounts:
-    #   print(account.username, 50 * "——")
-      # 600535 600
-      # print(account.buy(code = "600535",price = 15.78, stock_num=200 ))
-      # print(account.get_balance())
-      # print(account.get_position())
-      # print(account.creat_group(groupName= "动态创建2", desc="用API创建",authority=1))
-      # print(account.get_groups())
-
       
       # hangup_order =account.get_can_cancel_order()
       # print(hangup_order)
