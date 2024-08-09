@@ -2,8 +2,10 @@
 from typing import List
 import pandas as pd
 from pool.base import StockPool
-from favor.favor import StockFavorManagement
+
 from collector.akshare_data_collector import AkshareDataCollector
+from user.user import User
+from user.user_management import UserManagement
 
 class AmountStockPool(StockPool):
   def __init__(self):
@@ -44,10 +46,14 @@ class AmountStockPool(StockPool):
 
   
 class FavorStockPool(StockPool):
-  def __init__(self,groups:List[str]):
+  def __init__(self,groups:List[str],user:User=None):
     self.groups = groups
-    self.adc = AkshareDataCollector()
-    self.sfm = StockFavorManagement()
+    if user is None:
+      um = UserManagement()
+      users = um.get_users()
+      self.user = users[0]
+    else:
+      self.user = user
   
   def get_symbols(self):
     """
@@ -62,9 +68,8 @@ class FavorStockPool(StockPool):
     """
     symbols=[]
     for group in self.groups:
-      symbols += self.sfm.get_symbols(group_name=group)
-    symbols = list(set(symbols))  
-    # df[df['symbol'].isin(symbols)]    
+      symbols += self.user.favor.get_symbols(group_name=group)
+    symbols = list(set(symbols))      
     return symbols
 
 class JingJiaRiseStockPool(StockPool):

@@ -50,7 +50,6 @@ class StockFavorManagement:
         em.update_em_favor_list(
             symbols, group_full_name=f"{group_name[:3]}全榜", group_new_name=group_name)
     def del_from_group(self, symbols: List[str] = [], group_name: str = "斐纳斯精选"):
-        # print(em.del_from_group(" ".join(symbols), group_name=group_name, entity_type="stock"))
         for symbol in symbols:
             print(em.del_from_group(symbol, group_name=group_name, entity_type="stock"))
 
@@ -144,7 +143,9 @@ class FavorForEM(Favor):
             assert group_name is not None
             group_id = self.get_group_id(group_name)
             if not group_id:
-                raise Exception(f"could not find group:{group_name}")
+                # raise Exception(f"could not find group:{group_name}")
+                print(f"could not find group:{group_name}")
+                return []
         params: dict = {
             "g":group_id
         }

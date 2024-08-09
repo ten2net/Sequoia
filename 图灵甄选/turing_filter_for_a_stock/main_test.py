@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from account.account import AccountManagement
 from core.topic import FavorSignalTopic, TradeSignalTopic
+from pool.pool import FavorStockPool
 from trader.base import OrderMessage
 from trader.sim.trader import Trader
 from trader.trader_management import SimTraderManagement
@@ -87,12 +88,12 @@ if __name__ == "__main__":
       "group_name": "热股强势",
       "symbols": ['000002','000001']
     }
-    pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)   
+    # pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)   
     
     users = um.get_users()
     for user in users:
-      pass
-      # print(user.username, 50 * "——")
+      # pass
+      print(user.username, 50 * "——")
       # groups = user.favor.get_groups()
       # print(groups)
       # group_name = 'Test'
@@ -105,6 +106,8 @@ if __name__ == "__main__":
       # print(user.favor.update_favor(['000002','000001'],"API"))
       # print(user.favor.add_to_group(code='000002',group_name="API全"))
       # print(user.favor.del_from_group(code='000002',group_name="API全"))
+      
+      print(FavorStockPool(["自选股","无雷"],user).get_symbols())
     
 
 
