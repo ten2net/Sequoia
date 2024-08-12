@@ -42,7 +42,7 @@ class LargeBuyStockRadar(StockRadar):
         symbols_spot_df = market_spot_df[market_spot_df['code'].isin(symbols)]
         fand_filter_list = [SymbolFilter(),
                             NameFilter(),
-                            TotalCapitalFilter(min_threshold=30, max_threshold=1200), #总市值过滤
+                            TotalCapitalFilter(min_threshold=30, max_threshold=1200), #总市值过滤                            
                             ]
         fand_filter_chain = FilterChain(fand_filter_list)
         symbols_spot_df = fand_filter_chain.apply(symbols_spot_df)        
@@ -54,7 +54,7 @@ class LargeBuyStockRadar(StockRadar):
         # 5、附加其他指标
         # 6、筛选股票，实现单独的过滤器，添加到过滤器链中即可
         filters = [
-            AmountFilter(threshold=1.5), # 昨日成交额过滤器，过滤掉成交额小于2亿的股票
+            AmountFilter(threshold=3), # 昨日成交额过滤器，过滤掉成交额小于2亿的股票
             # HighVolumeFilter(threshold=2), # 昨日成交量过滤器，过滤掉成交量大于5日均量1.3倍的股票
         ]
         filter_chain = FilterChain(filters)
@@ -96,7 +96,7 @@ class LargeBuyStockRadar(StockRadar):
             #10、交易信号生成，主程序中启动的模拟盘交易管理器SimTraderManagement负责侦听交易信号，实施交易
             try:            
                 now = datetime.now()
-                if ganzhou_index < 0.05:   # 情绪太差,只卖不买
+                if ganzhou_index < 0.03:   # 情绪太差,只卖不买
                   if (now.hour==9 and now.minute <=45) or (now.hour==14 and now.minute <=10):   # 发出一键清仓信号
                     pub.sendMessage(str(TradeSignalTopic.SELL_ALL),message=OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index))
                   else:
