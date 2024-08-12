@@ -10,6 +10,7 @@ import threading
 from config import stock_radares,jinjia_stock_radares,dev_stock_radares
 from radar.hot_symbols import HotSymbolStockRadar
 from trader.trader_management import SimTraderManagement
+from user.user_management import UserManagement
 
 def next_exec_seconds(hour=9, minute=26):
     now = datetime.now()
@@ -65,9 +66,12 @@ def main():
     # load_dotenv()  # Load environment variables from .env file
     os.environ.pop("EM_APPKEY")
     os.environ.pop("EM_HEADER")
-    os.environ.pop("WECOM_GROUP_BOT_KEYS")       
+    os.environ.pop("USER_CONFIG_LIST")
+    os.environ.pop("ACCOUNT_STRATEGT_MAPPING")
+    os.environ.pop("WECOM_GROUP_BOT_KEYS")         
     load_dotenv() 
-    
+    um = UserManagement()  # 启动用户的自选股更新信号侦听
+    um.startWatch() 
     stm = SimTraderManagement()  # 模拟交易管理
     stm.startWatch()      
 
