@@ -254,8 +254,8 @@ def update_em_favor_list(symbol_list:list[str],group_full_name:str ,group_new_na
         create_group(group_new_name,session)
     else:
         # 删除上一榜出票
-        stocks = list_entities(group_name=group_new_name, session=session)
-        # del_all_from_group( group_name=group_new_name, entity_type="stock")
+        # stocks = list_entities(group_name=group_new_name, session=session)
+        del_all_from_group( group_name=group_new_name, entity_type="stock")
     
     # 图灵甄选全榜中包含全部的出票
     group_id_today = get_group_id(group_full_name,session)
