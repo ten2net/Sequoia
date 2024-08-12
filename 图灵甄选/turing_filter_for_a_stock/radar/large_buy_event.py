@@ -54,7 +54,7 @@ class LargeBuyStockRadar(StockRadar):
         # 5、附加其他指标
         # 6、筛选股票，实现单独的过滤器，添加到过滤器链中即可
         filters = [
-            AmountFilter(threshold=3), # 昨日成交额过滤器，过滤掉成交额小于2亿的股票
+            AmountFilter(threshold=5), # 昨日成交额过滤器，过滤掉成交额小于2亿的股票
             # HighVolumeFilter(threshold=2), # 昨日成交量过滤器，过滤掉成交量大于5日均量1.3倍的股票
         ]
         filter_chain = FilterChain(filters)
@@ -83,16 +83,14 @@ class LargeBuyStockRadar(StockRadar):
             df = df.reset_index(drop=True)
             print(colored(f"""{self.name}发现了 {df.shape[0]} 个目标：{df['name'].tolist()}""","green"))
             # 9、自选股
-            try:
-                results = df['code'].tolist()
-                results = results[::-1]  # 确保新加自选的在上面
-                favor_message={
-                  "group_name": self.name,
-                  "symbols": results
-                }
-                pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)
-            except Exception as e:
-                print(f'东方财富接口调用异常:{e}')
+            results = df['code'].tolist()
+            results = results[::-1]  # 确保新加自选的在上面
+            favor_message={
+              "group_name": self.name,
+              "symbols": results
+            }
+            pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)
+
             #10、交易信号生成，主程序中启动的模拟盘交易管理器SimTraderManagement负责侦听交易信号，实施交易
             try:            
                 now = datetime.now()
