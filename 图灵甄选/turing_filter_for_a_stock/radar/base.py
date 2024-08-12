@@ -18,10 +18,6 @@ class StockRadar(ABC):
         weights = [-16, -8, -4, -2, -1, 1, 2, 4, 8, 16]
 
         df['segment'] = pd.cut(df['pct'] / 100, bins=bins, labels=weights, right=True)
-        # df['segment2'] = pd.cut(df['pct'] / 100, bins=bins, right=True)
-        # segment_counts = df['segment2'].value_counts()
-        # print(segment_counts)
-        # print(df['segment2'].cat)
 
         df['weighted_amount'] = df['amount'] * df['segment'].astype(float)
         # 计算实际加权因子
@@ -32,6 +28,5 @@ class StockRadar(ABC):
 
         # 计算强弱指数
         strength_index = round(actual_weighted_factor / max_weighted_factor,3)
-        print(f"强弱指数: {strength_index}")
         return strength_index
         

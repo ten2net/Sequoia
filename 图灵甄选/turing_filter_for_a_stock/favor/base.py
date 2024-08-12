@@ -2,8 +2,6 @@ from abc import ABC, abstractmethod
 from typing import List
 
 class Favor(ABC):
-    def aaa(self):
-        pass
     @abstractmethod
     def create_group(self,group_name) -> str:
         pass
