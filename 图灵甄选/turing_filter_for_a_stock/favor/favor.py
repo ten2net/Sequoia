@@ -47,6 +47,7 @@ class FavorForEM(Favor):
         url += urlencode(params) +"&"
         url += f"&_={ts}"
         url = url.replace("0%25","0%") # 还原urlencode错误转义的em股票代码
+        url = url.replace("1%25","1%") # 还原urlencode错误转义的em股票代码
         return url     
     def get_groups(self):
         params: dict = {
@@ -175,7 +176,7 @@ class FavorForEM(Favor):
             group_id = self.get_group_id(group_name)
             if not group_id:
                 raise Exception(f"could not find group:{group_name}")
-        codes = self.list_entities(group_name)
+        codes = self.__list_entities__(group_name)
         codeList = [self.to_eastmoney_code(code, entity_type=entity_type) for code in codes]
         codeList = ",".join(codeList)
         
@@ -217,6 +218,9 @@ class FavorForEM(Favor):
         group_id_new = self.get_group_id(group_new_name)
         if not group_id_new: 
             self.create_group(group_new_name)
+        else:
+            # 删除上一榜出票
+            self.del_all_from_group( group_name=group_new_name, entity_type="stock")            
         # group_full_name中包含全部的出票
         group_id_full = self.get_group_id(group_full_name)
         if not group_id_full:          
