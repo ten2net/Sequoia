@@ -68,7 +68,7 @@ class SimTraderManagement(TradeSignalHandler):
                   # 当日停牌的股票 sell_price 为 nan，需要过滤掉
                   sell_signal =math.isnan(sell_price) if position_rate<0 else row['close'] < row['open'] or abs(row['pct'] - row['upper_rate']) >= 0.1 or math.isnan(sell_price)
                   if not sell_signal: continue
-                  quantity_can_use = row['quantity_can_use'] * position_rate 
+                  quantity_can_use = abs(row['quantity_can_use'] * position_rate)
                   quantity_can_use = quantity_can_use - (quantity_can_use % 100)  # 确保是整手
                   buy_batch_result = account.trader.sell(row['code'], price=sell_price, stock_num=quantity_can_use)
                   print(buy_batch_result)  
