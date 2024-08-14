@@ -70,10 +70,12 @@ def main():
     else:
         pbar_list = []
         task_cron_config=[
+            ([8],[30],[start_jingjia_rice_radar]), # 自选股全榜中删除前一天的出票
             ([9],[26,28,31],[start_jingjia_rice_radar]),
             ([9],[30 + i * 2 for i in range(29 // 2 + 1)],[start_financial_radar_system]),
             ([11],[i * 3 for i in range(30 // 3 + 1)],[start_financial_radar_system]),
             ([10,13,14],[i * 3 for i in range(59 // 3 + 1)],[start_financial_radar_system]),
+            ([22],[30],[start_financial_radar_system]),
         ]
         for cron_config in task_cron_config:
             hours = cron_config[0]

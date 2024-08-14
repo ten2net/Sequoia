@@ -1,3 +1,4 @@
+from datetime import datetime
 import math
 from typing import List, Optional
 from urllib.parse import urlencode
@@ -225,7 +226,14 @@ class FavorForEM(Favor):
         group_id_full = self.get_group_id(group_full_name)
         if not group_id_full:          
             self.create_group(group_full_name) 
+        else:
+            now = datetime.now()
+            if now.hour< 9:   # 删除前一天的出票
+                self.del_all_from_group( group_name=group_full_name, entity_type="stock")  
+           
         # 添加自选 
+        now = datetime.now()
+        if now.hour< 9 : return  # 只在交易时段更新
         group_name_list = [group_new_name,group_full_name] 
         for group_name in group_name_list:       
             self.add_symbols_to_group(symbol_list, group_name=group_name, entity_type="stock")
