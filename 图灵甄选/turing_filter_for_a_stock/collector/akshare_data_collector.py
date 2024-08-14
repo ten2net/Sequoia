@@ -150,8 +150,8 @@ class AkshareDataCollector(DataCollector):
         df['volume_yestday'] = df['volume'].shift(1)
         df['amount_yestday'] = df['amount'].shift(1)
         df['turnover_yestday'] = df['turnover'].shift(1)
-        df['volume_5_with_today'] = df['volume'].rolling(window=5).mean()
-        df['volume_5'] = df['volume_5_with_today'].shift(1)
+        df['volume_3_with_today'] = df['volume'].rolling(window=3).mean()
+        df['volume_3'] = df['volume_3_with_today'].shift(1)
         df['date'] = pd.to_datetime(df['date'])
         df = df.set_index('date', drop=False)
         return df

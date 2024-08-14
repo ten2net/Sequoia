@@ -7,6 +7,7 @@ from core.topic import FavorSignalTopic, TradeSignalTopic
 from filter.filter_chain import FilterChain
 from filter.fund.fund_filter import NameFilter, SymbolFilter, TotalCapitalFilter
 from filter.trading.amount_filter import AmountFilter
+from filter.trading.volume_filter import HighVolumeFilter
 from notification.wecom import WeComNotification
 from radar.base import StockRadar
 from pool.pool import HotSymbolStockPool
@@ -35,7 +36,7 @@ class HotSymbolStockRadar(StockRadar):
         stockPools = [mainStockPool]
         symbols = []
         for stockPool in stockPools:
-            symbols += stockPool.get_symbols(k=5)
+            symbols += stockPool.get_symbols(k=10)
         # 3、先对symbols进行基本面过滤,以便减少后续计算量
         symbols_spot_df = market_spot_df[market_spot_df['code'].isin(symbols)]
         fand_filter_list = [SymbolFilter(),
@@ -55,8 +56,8 @@ class HotSymbolStockRadar(StockRadar):
         # 5、附加其他指标
         # 6、筛选股票，实现单独的过滤器，添加到过滤器链中即可
         filters = [
-            AmountFilter(threshold=6),  # 昨日成交额过滤器，过滤掉成交额小于6亿的股票
-            # HighVolumeFilter(threshold=2), # 昨日成交量过滤器，过滤掉成交量大于5日均量1.3倍的股票
+            AmountFilter(threshold=4),  # 昨日成交额过滤器，过滤掉成交额太小的股票
+            HighVolumeFilter(threshold=1.5), # 昨日成交量过滤器，过滤掉成交量大于5日均量2倍的股票
         ]
         filter_chain = FilterChain(filters)
         df = filter_chain.apply(df)
@@ -193,7 +194,7 @@ class HotSymbolStockRadar(StockRadar):
                 print(f'东方财富接口调用异常:{e}')
             # 11、发送消息通知
             now = datetime.now()
-            if now.hour >= 14: df = df[df["pct"] < 10] # 上午10点后，通知中会过滤掉涨幅大于10%的股票
+            # if now.hour >= 14: df = df[df["pct"] < 10] # 上午10点后，通知中会过滤掉涨幅大于10%的股票
             df = df.head(self.topN)
             df['name'] = df.apply(lambda row: "☀" + row['name'] if row['is_hot_industry'] else row['name'], axis=1)
             wecom_msg_enabled = os.environ.get('WECOM_MSG_ENABLED').lower() == 'true'

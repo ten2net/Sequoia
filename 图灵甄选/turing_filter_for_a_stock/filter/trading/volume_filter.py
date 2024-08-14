@@ -13,7 +13,7 @@ class HighVolumeFilter(StockFilter):
         self.times_threshold = threshold
 
     def filter(self, df: pd.DataFrame) -> pd.DataFrame:      
-        return df[(df['volume_yestday'] / df['volume_5']) < self.times_threshold]
+        return df[(df['volume_yestday'] / df['volume_3']) < self.times_threshold]
       
 class VolumeFilter(StockFilter):
     def __init__(self, threshold: int = 5000):
