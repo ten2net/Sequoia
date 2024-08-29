@@ -239,23 +239,21 @@ class Trader:
         :return: 买入的股票及其数量
         """
         # 先撤销未成交的挂单
-        can_cancel_orderes =self.get_can_cancel_order()
-        if can_cancel_orderes is not None:
-            for order in can_cancel_orderes:
-                if order['mmflag'] == '0':
-                    print(self.cancel_order(code=order["code"],order_no=order["order_no"]))        
+        # can_cancel_orderes =self.get_can_cancel_order()
+        # if can_cancel_orderes is not None:
+        #     for order in can_cancel_orderes:
+        #         if order['mmflag'] == '0':
+        #             print(self.cancel_order(code=order["code"],order_no=order["order_no"]))        
                 
         if position_ratio <-1 or position_ratio > 1:
             raise ValueError("仓位比例必须在-1和1之间")
         
         balance_info = self.get_balance_info()  # {'account': '241990400000029517', 'total_money': '999160.83', 'account_pct': '-0.30', 'account_return': '-839.17', 'market_value': '348792.72', 'can_use_money': '650368.12', 'freeze_money': '74128.72'}
-
         if 0 < position_ratio < 0.3 and (float(balance_info['market_value']) /float(balance_info['total_money'])) > 0.7:
-            return {}
+            return {"msg": "已经超过7成，风控模块拒绝买入"}
         if -0.1 < position_ratio < 0 and (float(balance_info['market_value']) /float(balance_info['total_money'])) > 0.5:
-            return {}
+            return {"msg": "情绪太差, 仓位已经超过一半，风控模块拒绝买入"}
         # 计算单次买入金额
-        print(stock_prices)
         buy_amount_per_stock = float(balance_info['can_use_money']) * position_ratio // len(stock_prices.items())
         
         # 计算每只股票的买入数量

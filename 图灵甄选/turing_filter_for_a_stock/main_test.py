@@ -1,8 +1,10 @@
 import os
 
 from dotenv import load_dotenv
+from collector.akshare_data_collector import AkshareDataCollector
 from core.topic import FavorSignalTopic, TradeSignalTopic
 from pool.pool import FavorStockPool
+from strategy.fib import FibonacciTradingSignal
 from trader.base import OrderMessage
 from trader.sim.trader import Trader
 from trader.trader_management import SimTraderManagement
@@ -41,9 +43,10 @@ if __name__ == "__main__":
     # print(buy(code = "603270",price = 19.40, stock_num=300 ) )
     # print(sell(code = "000099",price = 18.40, stock_num=100.0 ) )
     # print(get_can_cancel_order())
-    
-    # um = UserManagement() 
-    # users = um.get_users()
+    adc = AkshareDataCollector()
+    # print(adc.get_hot_symbols(10))
+    um = UserManagement() 
+    users = um.get_users()
     # for user in users:
     #   print(user.username, 50 * "——")
     #   accounts = user.get_accounts()
@@ -52,12 +55,12 @@ if __name__ == "__main__":
     #     # print(account.trader.buy(code = "603270",price = 19.40, stock_num=300 ))
         
     #     hangup_order =account.trader.get_can_cancel_order()
-    #     print(hangup_order)
+    #     # print(hangup_order)
     #     for item in hangup_order:
     #         # if item['mmflag'] == '0':
     #         print(account.trader.cancel_order(code=item["code"],order_no=item["order_no"]))     
-    tm = SimTraderManagement()
-    tm.startWatch()   
+    # tm = SimTraderManagement()
+    # tm.startWatch()   
 
     # message_center.sendMessage('buy_signal', 'ssssssssssssssss','ddd')
     # message_center.sendMessage('buy.signal', message={"aa":"mm"})
@@ -70,18 +73,18 @@ if __name__ == "__main__":
     # pub.sendMessage(str(TradeSignalTopic.SELL_HALF),message=OrderMessage(strategyName="热股强势", symbol=None, price=None, pct=None ,index=-0.001)) 
     # pub.sendMessage(str(TradeSignalTopic.SELL_QUARTER),message=OrderMessage(strategyName="热股强势", symbol=None, price=None, pct=None ,index=-0.001)) 
     
-    um = UserManagement() 
-    um.startWatch()
-    favor_message={
-      "group_name": "热股强势",
-      "symbols": ['000002','000001']
-    }
+    # um = UserManagement() 
+    # um.startWatch()
+    # favor_message={
+    #   "group_name": "热股强势",
+    #   "symbols": ['000002','000001']
+    # }
     # pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)   
     
-    users = um.get_users()
-    for user in users:
-      # pass
-      print(user.username, 50 * "——")
+    # users = um.get_users()
+    # for user in users:
+    #   # pass
+    #   print(user.username, 50 * "——")
       # groups = user.favor.get_groups()
       # print(groups)
       # group_name = 'Test'
@@ -95,7 +98,14 @@ if __name__ == "__main__":
       # print(user.favor.add_to_group(code='000002',group_name="API全"))
       # print(user.favor.del_from_group(code='000002',group_name="API全"))
       
-      print(FavorStockPool(["自选股","无雷"],user).get_symbols())
+      # print(FavorStockPool(["自选股","无雷"],user).get_symbols())
+      
+    fib =FibonacciTradingSignal(27.19,22.62)
+    print([0.236, 0.382, 0.500, 0.618, 0.786, 1.000, 1.618, 2.618])
+    print(fib.fib_levels)
+    print(fib.generate_signal(23.45))
+
+
     
 
 

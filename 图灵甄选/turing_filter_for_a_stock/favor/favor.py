@@ -186,12 +186,10 @@ class FavorForEM(Favor):
             "scs":codeList
         }
         url = self.__build_url__(action="dslot",params=params)
-        resp = self.session.get(url, headers=self.HEADER)
+        resp = requests.get(url, headers=self.HEADER)
 
         return self.__parse_resp__(resp)
 
-
-        return parse_resp(resp)
     def add_to_group(self, 
             code, entity_type="stock", group_name=None, group_id=None
     ):
@@ -229,7 +227,7 @@ class FavorForEM(Favor):
         else:
             now = datetime.now()
             if now.hour< 9:   # 删除前一天的出票
-                self.del_all_from_group( group_name=group_full_name, entity_type="stock")  
+              self.del_all_from_group( group_name=group_full_name, entity_type="stock")  
            
         # 添加自选 
         now = datetime.now()

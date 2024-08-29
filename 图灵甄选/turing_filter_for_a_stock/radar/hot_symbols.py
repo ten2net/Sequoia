@@ -41,7 +41,7 @@ class HotSymbolStockRadar(StockRadar):
         symbols_spot_df = market_spot_df[market_spot_df['code'].isin(symbols)]
         fand_filter_list = [SymbolFilter(),
                             NameFilter(),
-                            TotalCapitalFilter(min_threshold=60, max_threshold=1200),  # 总市值过滤
+                            TotalCapitalFilter(min_threshold=40, max_threshold=1200),  # 总市值过滤
                             ]
         fand_filter_chain = FilterChain(fand_filter_list)
         symbols_spot_df = fand_filter_chain.apply(symbols_spot_df)
@@ -56,7 +56,7 @@ class HotSymbolStockRadar(StockRadar):
         # 5、附加其他指标
         # 6、筛选股票，实现单独的过滤器，添加到过滤器链中即可
         filters = [
-            AmountFilter(threshold=4),  # 昨日成交额过滤器，过滤掉成交额太小的股票
+            AmountFilter(threshold=3),  # 昨日成交额过滤器，过滤掉成交额太小的股票
             HighVolumeFilter(threshold=1.5), # 昨日成交量过滤器，过滤掉成交量大于5日均量2倍的股票
         ]
         filter_chain = FilterChain(filters)

@@ -17,15 +17,17 @@ class SimTraderManagement(TradeSignalHandler):
       for user in users:
          self.trading_accounts += user.get_accounts()
          
-    def on_buy_signal(self, message:OrderMessage, **kwargs):
-        print(f"----buy_signal {message.__dict__}!")
+    def on_buy_signal(self, message:dict, **kwargs):
+        orderMessage = OrderMessage(strategyName=message["strategyName"], symbol=message["code"], price=message["price"], pct=message["pct"] ,index=message["index"])
+        self.commit_buy_orders(strategyName=message["strategyName"], orderMessages = [orderMessage], position_ratio=message["index"])
     def on_batch_buy_signal(self, message:List[OrderMessage], **kwargs):
         strategyName=message[0].strategyName
         index=message[0].index
         self.commit_buy_orders(strategyName=strategyName, orderMessages = message, position_ratio=index)
     
-    def on_sell_signal(self,  message:OrderMessage, **kwargs):
-      self.commit_sell_order(message, 1) 
+    def on_sell_signal(self,  message:dict, **kwargs):
+      orderMessage = OrderMessage(strategyName=message["strategyName"], symbol=message["code"], price=message["price"], pct=message["pct"] ,index=message["index"])
+      self.commit_sell_order(orderMessage, 1) 
     def on_sell_half_signal(self, message:OrderMessage, **kwargs):
       self.commit_sell_order(message, 1/2) 
     def on_sell_quarter_signal(self, message:OrderMessage, **kwargs):
@@ -36,7 +38,6 @@ class SimTraderManagement(TradeSignalHandler):
       print(f"----cancel_order_signal {message.__dict__}!")    
          
     def commit_buy_orders(self,strategyName:str,orderMessages:List[OrderMessage], position_ratio:float):
-       print("orderMessages len=",len(orderMessages))
        for account in self.trading_accounts: 
          if account.strategyName == strategyName:         
            stock_prices={orderMessage.symbol:orderMessage.price for orderMessage in orderMessages}
@@ -46,6 +47,7 @@ class SimTraderManagement(TradeSignalHandler):
     def commit_sell_order(self, message:OrderMessage, position_rate: float):
       msg ="一键清仓 " if position_rate <0 else "平仓" if position_rate == 1 else "平半" if position_rate==0.5 else "平四分之一" 
       print(f"{datetime.now()},卖出信号:{msg}, 当前情绪指数:{message.index}")
+      # return 
       strategyName = message.strategyName
       index = message.index
       for account in self.trading_accounts: 

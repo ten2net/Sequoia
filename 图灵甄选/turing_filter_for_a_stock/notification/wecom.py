@@ -4,6 +4,10 @@ import datetime
 import os
 import json
 import pandas as pd
+from pubsub import pub
+import time
+
+from core.topic import TradeSignalTopic
 
 ganzhou_index_list:List[float]=[]
 class WeCom:
@@ -50,8 +54,44 @@ class WeComNotification:
             webhook_url = f"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={key}"
             wecom = WeCom(webhook_url)
             response = wecom.send_message(title, message)
-            print(response, f"""消息长度:{len(message)}""")
+            time.sleep(1)
+            # print(response, f"""消息长度:{len(message)}""")
 
     def send_stock_df(self, title: str, df: pd.DataFrame, ganzhou_index: float):
         msg = self.build_markdown_msg(df, ganzhou_index)
         self.send(title=title, message=msg)
+        
+    
+    def __build_trader_msg__(self, message: dict,direct:str):
+        color ="warning" if direct == "买入" else "info"
+        colorIndex ="warning" if message['index'] > 0.05 else "info"
+        msg = f"""🌼<font color={color}> {direct} </font> ☞ [{message['code']} {message['name']}](https://www.iwencai.com/unifiedwap/result?w={message['code']}&querytype=stock)  
+    开盘    最新    涨跌幅
+    <font color={color}>{message['open']}  {message['close']}   {message['pct']}%  </font> 
+    <font color={color}>阻力位： {message['resistances']} </font> 
+    <font color={color}>支撑位：{message['supports']} </font> 
+    最高    最低    换手率
+    <font color={color}>{message['high']}  {message['low']}   {message['turnover']}%  </font> 
+    涨速    量比    成交额
+    <font color={color}>{message['5_minute_change']}     {message['volume_ratio']}      {message['amount'] /(10000* 10000):.1f}  </font> 
+    PE       PB      总市值
+    <font color={color}>{message['pe']}   {message['pb']}     {message['total_capital'] /(10000* 10000):.0f}  </font> 
+    {'-' * 25} 
+    情绪指数：<font color={colorIndex}> {message['index']} </font>
+    交易日期：{message['date']} 
+    信号时间：{message['time']} 
+💖 情绪指数(-1 ~ 1)
+☏ 小于0.05显示绿色，空仓观望 
+        """ 
+        return msg       
+    def on_buy_signal(self, message: dict):
+        title = "图灵买入信号"
+        msg = self.__build_trader_msg__(message,direct="买入")
+        self.send(title=title, message=msg)
+    def on_sell_signal(self, message: dict):
+        title = "图灵卖出信号"
+        msg = self.__build_trader_msg__(message,direct="卖出")
+        self.send(title=title, message=msg)
+    def startWatch(self):
+      pub.subscribe(self.on_buy_signal, str(TradeSignalTopic.BUY))          
+      pub.subscribe(self.on_sell_signal, str(TradeSignalTopic.SELL))          

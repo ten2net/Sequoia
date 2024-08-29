@@ -129,7 +129,7 @@ class AkshareDataCollector(DataCollector):
             ~(df['name'].apply(str).str.startswith('C'))       
             ]
         df[['volume','price','diff']] =df['info'].astype(str).str.split(",",expand=True).astype(float)
-        df = df.query('diff > 0.02 and (volume / 500000) > 1 and price > 3 ') 
+        df = df.query('diff > 0.03 and (volume / 500000) > 1 and price > 3 ') 
         # df.drop(columns=['volume'], inplace=True)      
         return df
     def get_data(self, symbol: str, start_date: str = None, end_date: str = None, adjust: str = "") -> pd.DataFrame:
@@ -196,6 +196,19 @@ class AkshareDataCollector(DataCollector):
         df.drop(columns=['序号'], inplace=True)
         df.drop(columns=['涨跌额'], inplace=True)
         df.drop(columns=['涨速'], inplace=True)
+        df.columns = list(Constants.SPOT_EM_COLUMNS)
+         # 计算涨跌停价 
+        df['upper_limit'] = df.apply(lambda row: self.__get_limit_price__(row)[0] ,axis=1 )
+        df['lower_limit'] = df.apply(lambda row: self.__get_limit_price__(row)[1] ,axis=1 )
+        return df
+    def get_fund_etf_spot_em(self):
+        df = ak.fund_etf_spot_em()
+        df=df[['代码', '名称', '最新价',  '涨跌幅', '成交量', '成交额',
+       '振幅', '最高价', '最低价','开盘价', '昨收','量比', '换手率','IOPV实时估值', '基金折价率', '总市值',  '流通市值']]
+        df["5_minute_change"] = 0
+        df["60_day_pct"] = 0
+        df["ytd_pct"] = 0
+        # df.drop(columns=['涨速'], inplace=True)
         df.columns = list(Constants.SPOT_EM_COLUMNS)
          # 计算涨跌停价 
         df['upper_limit'] = df.apply(lambda row: self.__get_limit_price__(row)[0] ,axis=1 )
@@ -274,29 +287,31 @@ class AkshareDataCollector(DataCollector):
             if index < 8:   # 热门行业前8个
                 stock_df = ak.stock_board_industry_cons_em(symbol=row['板块名称'])
                 stock_df = stock_df[stock_df['代码'].astype(str).str[:1].isin(['0','3','6'])] 
-                stock_df = stock_df.sort_values(by="成交额",ascending=False)        
-                stock_df.reset_index(drop=True)
+                stock_df['amount_rank'] = stock_df['成交额'].rank(method='dense',ascending=False)
+                stock_df['turnover_rank'] = stock_df['换手率'].rank(method='dense',ascending=False)
+                stock_df['pct_rank'] = stock_df['涨跌幅'].rank(method='dense',ascending=False) 
+                stock_df = stock_df[
+                    (stock_df['amount_rank'] <= k) &
+                    (stock_df['turnover_rank'] <= k) &
+                    (stock_df['pct_rank'] <= k)
+                ]  
+                stock_df['score'] = 3 * k - (stock_df['amount_rank'] + stock_df['turnover_rank'] + stock_df['pct_rank'])
+                # print(stock_df.columns)
+                stock_df = stock_df.sort_values(by="score",ascending=False)        
+                stock_df.reset_index(drop=True)                
                 stock_df=stock_df.head(k)
-                for index2,row2 in stock_df.iterrows(): 
-                    df = ak.stock_zh_a_hist_pre_min_em(symbol=row2['代码'], start_time="09:00:00")
-                    df=df[ df['成交额'] > 0]
-                    df["总成交额"] = df["成交额"].cumsum()
-                    df['代码']=row2['代码']
-                    df['名称']=row2['名称']
-                    
-                    ind = min(n,df.shape[0]) - df.shape[0]  
-                                
-                    df_alll.append(df.iloc[ind])
-        df = pd.DataFrame(df_alll)
-        df["成交额"] = df["成交额"] / (10000 * 10000)
-        df["总成交额"] = df["总成交额"] / (10000 * 10000)
-                
-        df = df.sort_values(by="总成交额",ascending=False)
-        
+                df_alll.append(stock_df)
+        df = pd.concat(df_alll, ignore_index=True)
+        # rerank
+        df['amount_rank'] = df['成交额'].rank(method='dense',ascending=False)
+        df['turnover_rank'] = df['换手率'].rank(method='dense',ascending=False)
+        df['pct_rank'] = df['涨跌幅'].rank(method='dense',ascending=False) 
+        df['score'] = len(df) * 3 - (df['amount_rank'] + df['turnover_rank'] + df['pct_rank'])
+        df = df.sort_values(by="score",ascending=False)        
         df.reset_index(drop=True)
-        
-        df = df[["代码","名称","开盘","最高","最低","收盘","成交量","总成交额"]]
-        df.columns = ['code','name', 'open', 'high', 'low', 'close', 'volume', 'amount']
+                
+        df = df[["代码","名称","涨跌幅","换手率","昨收","今开","最高","最低","最新价","成交量","成交额","score"]]
+        df.columns = ['code','name','pct','turnover','close_yestday', 'open', 'high', 'low', 'close', 'volume', 'amount','score']
         return df
     
 

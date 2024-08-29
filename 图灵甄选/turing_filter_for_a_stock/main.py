@@ -70,7 +70,7 @@ def main():
     else:
         pbar_list = []
         task_cron_config=[
-            ([8],[30],[start_jingjia_rice_radar]), # 自选股全榜中删除前一天的出票
+            ([8],[44],[start_jingjia_rice_radar]), # 自选股全榜中删除前一天的出票
             ([9],[26,28,31],[start_jingjia_rice_radar]),
             ([9],[30 + i * 2 for i in range(29 // 2 + 1)],[start_financial_radar_system]),
             ([11],[i * 3 for i in range(30 // 3 + 1)],[start_financial_radar_system]),
