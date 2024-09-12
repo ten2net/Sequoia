@@ -21,8 +21,9 @@ class UserManagement:
     def get_users(self):
         return self.users
     def on_update_favor_signal(self, message: dict):
+        daily=message.get('daily', False)
         for user in self.users:
-            user.favor.update_favor(symbols=message['symbols'],group_name=message['group_name'])
+            user.favor.update_favor(symbols=message['symbols'],group_name=message['group_name'],daily=daily)
     def startWatch(self):
       pub.subscribe(self.on_update_favor_signal, str(FavorSignalTopic.UPDATE_FAVOR))    
 

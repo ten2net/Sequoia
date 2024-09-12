@@ -11,6 +11,26 @@ from config import stock_radares,jinjia_stock_radares
 from trader.trader_management import SimTraderManagement
 from user.user_management import UserManagement
 
+def is_trading_time(now):
+    """
+    检查当前时间是否在交易时段内。
+    交易时段为每个交易日的9:26到15:00。
+    """
+    start_hour_9 = 9
+    start_minute = 26
+    
+    end_hour_11 = 11
+    start_hour_13 = 13
+    end_hour_15 = 15
+    # 构建交易开始和结束的时间
+    start_1 = datetime(now.year, now.month, now.day, start_hour_9, start_minute)
+    end_1 = datetime(now.year, now.month, now.day, end_hour_11, 30)
+    
+    start_2 = datetime(now.year, now.month, now.day, start_hour_13, 0)
+    end_2 = datetime(now.year, now.month, now.day, end_hour_15, 0)
+    
+    return now.weekday() < 5 and ((start_1 <= now <= end_1) or (start_2 <= now <= end_2))
+
 def next_exec_seconds(hour=9, minute=26):
     now = datetime.now()
     target_time = datetime(now.year, now.month, now.day, hour, minute)
@@ -29,7 +49,9 @@ def start_financial_radar_system():
         无参数。    
     Returns:
         无返回值。    
-    """    
+    """  
+    now = datetime.now()  
+    if not is_trading_time(now):return
     threads = []
     for radar in stock_radares:
         thread = threading.Thread(target=radar.startup)
@@ -38,7 +60,25 @@ def start_financial_radar_system():
     # 等待所有线程完成
     for thread in threads:
         thread.join()  
+def task_for_del_all_from_group():
+    """
+    清空几个重要自选股分组。
+    Args:
+        无参数。    
+    Returns:
+        无返回值。    
+    """ 
+    now = datetime.now()  
+    # if not is_trading_time(now):return    
+    groups= ["大笔买全榜","每日情全榜","热股强全榜","买信号全榜","卖信号全榜"]
+    um = UserManagement()
+    for user in um.users:
+        for group_name in groups:
+            user.favor.del_all_from_group(group_name=group_name)
+ 
 def start_jingjia_rice_radar():
+    now = datetime.now()  
+    if not is_trading_time(now):return    
     threads = []
     for radar in jinjia_stock_radares:
         thread = threading.Thread(target=radar.startup)
@@ -70,7 +110,7 @@ def main():
     else:
         pbar_list = []
         task_cron_config=[
-            ([8],[44],[start_jingjia_rice_radar]), # 自选股全榜中删除前一天的出票
+            ([9],[10],[task_for_del_all_from_group]), # 自选股全榜中删除前一天的出票
             ([9],[26,28,31],[start_jingjia_rice_radar]),
             ([9],[30 + i * 2 for i in range(29 // 2 + 1)],[start_financial_radar_system]),
             ([11],[i * 3 for i in range(30 // 3 + 1)],[start_financial_radar_system]),
@@ -100,24 +140,5 @@ def main():
             for pbar in pbar_list:
                 pbar.update(1)  # 手动更新进度条
 
-    # # Define non-critical factors' scorer and weights
-    # scorer = [PriceScorer, VolumeScorer, PEScorer, SentimentScorer]
-    # weights = {
-    #     'price': 0.3,
-    #     'volume': 0.2,
-    #     'pe': 0.3,
-    #     'sentiment': 0.2
-    # }
-
-    # # Create weighted voting filter
-    # voting_filter = WeightedVotingFilter(scorer, weights)
-
-
-    # # Filter non-critical factors
-    # final_filtered_stocks = voting_filter.filter(filtered_stocks)
-    # # Add to favorites
-    # add_to_favorites(final_filtered_stocks)
-    # # Send notification
-    # send_notification(final_filtered_stocks)
 if __name__ == "__main__":
     main()

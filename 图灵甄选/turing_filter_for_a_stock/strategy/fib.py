@@ -95,11 +95,11 @@ class FibonacciTradingSignal:
         self.high = high  # 最高价
         self.low = low    # 最低价
         # 斐波那契回撤和扩展比率
-        ratios = [0.236, 0.382, 0.500, 0.618, 0.786, 1.000, 1.618, 2.618]
+        ratios = [0.236, 0.382, 0.500, 0.618, 0.786, 1.000, 1.236, 1.382, 1.5, 1.618, 1.786, 2.000, 2.618]
         price_diff = self.high - self.low
         self.fib_levels = [round(self.low + price_diff * ratio,3) for ratio in ratios] 
  
-    def generate_signal(self,currentPrice: float, threshold=0.02):
+    def generate_signal(self,currentPrice: float, threshold=0.02,ganzhou_index: float=0.0):
         # 获取最近的三个阻力位和支撑位
         resistances = sorted([level for level in self.fib_levels if level > currentPrice])[:3]
         supports = sorted([level for level in self.fib_levels if level < currentPrice], reverse=True)[:3]
@@ -113,21 +113,18 @@ class FibonacciTradingSignal:
         closest_degree = min(distances) / closest_level 
         # print(ind,closest_level,min(distances),closest_degree)
         # 确定信号类型
+        buy_ind_max = 3 if ganzhou_index> 0.15 else (2 if ganzhou_index> 0.1 else 1)
         if closest_degree < threshold:
-            if 0 < ind <= 2:
+            if 0 <= ind <= buy_ind_max:
                 signal = "buy"
-            elif 5<= ind <6:
+            elif 5<= ind < 8:
                 signal = "sell" 
-            # elif 5<= ind <6:
-            #     signal = "buy" 
-            # elif 6<= ind <7:
-            #     signal = "sell" 
             else:
                 signal = "hold"  # 未到水平，持有
         else:
-            if ind == 0:
+            if ind < 2:
                 signal = "buy"  # 到最低水平，买入
-            elif ind == 7:
+            elif ind > 6:
                 signal = "sell"  # 到最高水平，卖出
             else:
                 signal = "hold"  # 未到水平，持有

@@ -1,4 +1,5 @@
 # from radar.cci_88 import CCIStockRadar
+from radar.everyday_targets import EverydayTargetStockRadar
 from radar.hot_symbols import HotSymbolStockRadar
 # from radar.jingjia_rise_event import JingJiaRiseStockRadar
 from radar.large_buy_event import LargeBuyStockRadar
@@ -20,6 +21,7 @@ all_radares = [
 stock_radares = [
     LargeBuyStockRadar(name="大笔买入", topN =22),
     HotSymbolStockRadar(name="热股强势", topN =22),
+    EverydayTargetStockRadar(name="每日情绪榜",topN=100)
 ]
 jinjia_stock_radares = [
     HotSymbolStockRadar(name="热股强势", topN =22),

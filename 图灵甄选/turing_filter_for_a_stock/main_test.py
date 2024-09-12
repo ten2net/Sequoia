@@ -3,13 +3,16 @@ import os
 from dotenv import load_dotenv
 from collector.akshare_data_collector import AkshareDataCollector
 from core.topic import FavorSignalTopic, TradeSignalTopic
-from pool.pool import FavorStockPool
+from pool.pool import ATPStockPool, AmountStockPool, FavorStockPool
+from radar.everyday_targets import EverydayTargetStockRadar
 from strategy.fib import FibonacciTradingSignal
 from trader.base import OrderMessage
 from trader.sim.trader import Trader
 from trader.trader_management import SimTraderManagement
 from user.user_management import UserManagement
 from pubsub import pub
+
+from main import task_for_del_all_from_group
 
 if __name__ == "__main__":
     os.environ.pop("EM_APPKEY")
@@ -73,8 +76,8 @@ if __name__ == "__main__":
     # pub.sendMessage(str(TradeSignalTopic.SELL_HALF),message=OrderMessage(strategyName="热股强势", symbol=None, price=None, pct=None ,index=-0.001)) 
     # pub.sendMessage(str(TradeSignalTopic.SELL_QUARTER),message=OrderMessage(strategyName="热股强势", symbol=None, price=None, pct=None ,index=-0.001)) 
     
-    # um = UserManagement() 
-    # um.startWatch()
+    um = UserManagement() 
+    um.startWatch()
     # favor_message={
     #   "group_name": "热股强势",
     #   "symbols": ['000002','000001']
@@ -100,10 +103,27 @@ if __name__ == "__main__":
       
       # print(FavorStockPool(["自选股","无雷"],user).get_symbols())
       
-    fib =FibonacciTradingSignal(27.19,22.62)
-    print([0.236, 0.382, 0.500, 0.618, 0.786, 1.000, 1.618, 2.618])
-    print(fib.fib_levels)
-    print(fib.generate_signal(23.45))
+    # fib =FibonacciTradingSignal(27.19,22.62)
+    # print([0.236, 0.382, 0.500, 0.618, 0.786, 1.000, 1.618, 2.618])
+    # print(fib.fib_levels)
+    # print(fib.generate_signal(23.45))
+    # df = adc.get_stock_hot_rank()
+    # df =df[(df["rank"]<50)]
+    # print(df[:50])
+    # print(df[50:])
+    
+    # task_for_del_all_from_group()
+    EverydayTargetStockRadar(name="每日情绪榜",topN=300).startup()
+    
+    # stockPool = ATPStockPool(k=300)
+    # df = stockPool.get_topN()
+    # print(len(df))
+    # print(df)
+    
+    # symbols = stockPool.get_symbols()    
+    # print(symbols)
+    
+
 
 
     

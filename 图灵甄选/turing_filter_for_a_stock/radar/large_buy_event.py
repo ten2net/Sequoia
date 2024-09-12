@@ -97,112 +97,111 @@ class LargeBuyStockRadar(StockRadar):
             pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)
 
             #10、交易信号生成，主程序中启动的模拟盘交易管理器SimTraderManagement负责侦听交易信号，实施交易
-            try:            
-                now = datetime.now()
-                if ganzhou_index < 0.03:   # 情绪太差,只卖不买
-                  if (now.hour==9 and now.minute <=45) or (now.hour==14 and now.minute <=10):   # 发出一键清仓信号
-                    pub.sendMessage(str(TradeSignalTopic.SELL_ALL),message=OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index))
-                  else:
-                    pub.sendMessage(str(TradeSignalTopic.SELL),message=OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)) 
-                elif 0.05 <= ganzhou_index < 0.12: # 情绪一般,适度买卖
-                  if (now.hour==9 and now.minute <=45) :   # 开盘15分钟只买不卖
-                    if now.minute >10:
-                      # 卖出信号生成，不涨停就先卖出1/4                   
-                      sell_message = OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)
-                      pub.sendMessage(str(TradeSignalTopic.SELL_QUARTER),message=sell_message)                     
-                    # 买入信号生成
-                    df_buy = df[(df['upper_rate'] - df['pct']) > (df['upper_rate'] / 5)]  # 过滤掉当日上涨空间已经不多的股票                    
-                    df_buy = df_buy[df_buy['close'] > df_buy['open']]  # 只买红票
-                    price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
-                    df_buy = df_buy.head(5)  # 只买最强的5个股票
-                    orderMessages = [OrderMessage(strategyName=self.name, symbol=row['code'], price=min(round(
-                        row['close'] * price_rate, 2), row['upper_limit_y']), pct=row['pct'], index=ganzhou_index) for index, row in df_buy.iterrows()]
-                    pub.sendMessage(str(TradeSignalTopic.BATCH_BUY), message=orderMessages) 
-                  elif (now.hour == 9 and now.minute > 45) or (9 < now.hour <= 14) :  # 下午两点之前只买不卖
-                    # 买入信号生成
-                    df_buy = df[(df['upper_rate'] - df['pct']) > (df['upper_rate'] / 3)]  # 过滤掉上涨空间还有三分之一的股票                         
-                    df_buy = df_buy[df_buy['close'] > df_buy['open']]  # 只买红票
-                    df_buy = df_buy[df_buy['pct'] < 5]  # 只买红票
-                    price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
-                    df_buy = df_buy.head(5)  # 只买最强的5个股票
-                    orderMessages = [OrderMessage(strategyName=self.name, symbol=row['code'], price=min(round(
-                        row['close'] * price_rate, 2), row['upper_limit_y']), pct=row['pct'], index=ganzhou_index) for index, row in df_buy.iterrows()]
-                    pub.sendMessage(str(TradeSignalTopic.BATCH_BUY), message=orderMessages) 
-                  else:   # 下午两点之后只卖不买
-                    # 卖出信号生成
-                    sell_message = OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)
-                    pub.sendMessage(str(TradeSignalTopic.SELL),message=sell_message)
-                elif 0.12 <= ganzhou_index < 0.22: # 情绪良好,多买少卖
-                  if (now.hour==9 and now.minute <=45) :   # 开盘15分钟只买不卖
-                    if now.minute >10:
-                      # 卖出信号生成，不涨停就先卖出1/2                   
-                      sell_message = OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)
-                      pub.sendMessage(str(TradeSignalTopic.SELL_HALF),message=sell_message)                     
-                    # 买入信号生成
-                    df_buy = df[(df['upper_rate'] - df['pct']) > (df['upper_rate'] / 5)]  # 过滤掉当日上涨空间已经不多的股票                    
-                    df_buy = df_buy[df_buy['close'] > df_buy['open']]  # 只买红票
-                    price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
-                    df_buy = df_buy.head(10)  # 只买最强的10个股票
-                    orderMessages = [OrderMessage(strategyName=self.name, symbol=row['code'], price=min(round(
-                        row['close'] * price_rate, 2), row['upper_limit_y']), pct=row['pct'], index=ganzhou_index) for index, row in df_buy.iterrows()]
-                    pub.sendMessage(str(TradeSignalTopic.BATCH_BUY), message=orderMessages) 
-                  elif (now.hour == 9 and now.minute > 45) or (9 < now.hour <= 14) :  # 下午两点之前只买不卖
-                    # 买入信号生成
-                    df_buy = df[(df['upper_rate'] - df['pct']) > (df['upper_rate'] / 3)]  # 过滤掉上涨空间还有三分之一的股票                         
-                    df_buy = df_buy[df_buy['close'] > df_buy['open']]  # 只买红票
-                    df_buy = df_buy[df_buy['pct'] < 5]  # 只买红票
-                    price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
-                    df_buy = df_buy.head(10)  # 只买最强的10个股票
-                    orderMessages = [OrderMessage(strategyName=self.name, symbol=row['code'], price=min(round(
-                        row['close'] * price_rate, 2), row['upper_limit_y']), pct=row['pct'], index=ganzhou_index) for index, row in df_buy.iterrows()]
-                    pub.sendMessage(str(TradeSignalTopic.BATCH_BUY), message=orderMessages) 
-                  else:   # 下午两点之后只卖不买
-                    # 卖出信号生成                    
-                    sell_message = OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)
-                    pub.sendMessage(str(TradeSignalTopic.SELL),message=sell_message)
-                elif 0.22 <= ganzhou_index < 0.33: # 情绪很好,只买不卖
-                  if (now.hour==9 and now.minute <=45) :   # 开盘15分钟
-                    if now.minute >10:
-                      # 卖出信号生成，不涨停就先卖出                   
-                      sell_message = OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)
-                      pub.sendMessage(str(TradeSignalTopic.SELL),message=sell_message)                     
-                    # 买入信号生成
-                    df_buy = df[(df['upper_rate'] - df['pct']) > (df['upper_rate'] / 5)]  # 过滤掉当日上涨空间已经不多的股票                    
-                    df_buy = df_buy[df_buy['close'] > df_buy['open']]  # 只买红票
-                    price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
-                    df_buy = df_buy.head(10)  # 只买最强的10个股票
-                    orderMessages = [OrderMessage(strategyName=self.name, symbol=row['code'], price=min(round(
-                        row['close'] * price_rate, 2), row['upper_limit_y']), pct=row['pct'], index=ganzhou_index) for index, row in df_buy.iterrows()]
-                    pub.sendMessage(str(TradeSignalTopic.BATCH_BUY), message=orderMessages) 
-                    # 卖出信号生成，不涨停就卖                   
-                    sell_message = OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)
-                    pub.sendMessage(str(TradeSignalTopic.SELL_HALF),message=sell_message)                    
-                  elif (now.hour == 9 and now.minute > 45) or (9 < now.hour <= 14) :  # 下午两点之前只买不卖
-                    # 买入信号生成
-                    df_buy = df[(df['upper_rate'] - df['pct']) > (df['upper_rate'] / 3)]  # 过滤掉上涨空间还有三分之一的股票                         
-                    df_buy = df_buy[df_buy['close'] > df_buy['open']]  # 只买红票
-                    df_buy = df_buy[df_buy['pct'] < 5]  # 只买红票
-                    price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
-                    df_buy = df_buy.head(10)  # 只买最强的10个股票
-                    orderMessages = [OrderMessage(strategyName=self.name, symbol=row['code'], price=min(round(
-                        row['close'] * price_rate, 2), row['upper_limit_y']), pct=row['pct'], index=ganzhou_index) for index, row in df_buy.iterrows()]
-                    pub.sendMessage(str(TradeSignalTopic.BATCH_BUY), message=orderMessages) 
-                  else:   # 下午两点之后锁仓
-                    pass
-                elif 0.33 <= ganzhou_index <=1: # 情绪高潮,全天不买入，开盘15分钟不涨停就卖出
-                  if (now.hour==9 and now.minute > 45):
-                     # 卖出信号生成,开盘15分钟不涨停就卖出一半仓位                    
-                    sell_message = OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)
-                    pub.sendMessage(str(TradeSignalTopic.SELL_HALF),message=sell_message)
-            except Exception as e:
-                print(f'东方财富接口调用异常:{e}')            
+            # try:            
+            #     now = datetime.now()
+            #     if ganzhou_index < 0.03:   # 情绪太差,只卖不买
+            #       if (now.hour==9 and now.minute <=45) or (now.hour==14 and now.minute <=10):   # 发出一键清仓信号
+            #         pub.sendMessage(str(TradeSignalTopic.SELL_ALL),message=OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index))
+            #       else:
+            #         pub.sendMessage(str(TradeSignalTopic.SELL),message=OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)) 
+            #     elif 0.05 <= ganzhou_index < 0.12: # 情绪一般,适度买卖
+            #       if (now.hour==9 and now.minute <=45) :   # 开盘15分钟只买不卖
+            #         if now.minute >10:
+            #           # 卖出信号生成，不涨停就先卖出1/4                   
+            #           sell_message = OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)
+            #           pub.sendMessage(str(TradeSignalTopic.SELL_QUARTER),message=sell_message)                     
+            #         # 买入信号生成
+            #         df_buy = df[(df['upper_rate'] - df['pct']) > (df['upper_rate'] / 5)]  # 过滤掉当日上涨空间已经不多的股票                    
+            #         df_buy = df_buy[df_buy['close'] > df_buy['open']]  # 只买红票
+            #         price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
+            #         df_buy = df_buy.head(5)  # 只买最强的5个股票
+            #         orderMessages = [OrderMessage(strategyName=self.name, symbol=row['code'], price=min(round(
+            #             row['close'] * price_rate, 2), row['upper_limit_y']), pct=row['pct'], index=ganzhou_index) for index, row in df_buy.iterrows()]
+            #         pub.sendMessage(str(TradeSignalTopic.BATCH_BUY), message=orderMessages) 
+            #       elif (now.hour == 9 and now.minute > 45) or (9 < now.hour <= 14) :  # 下午两点之前只买不卖
+            #         # 买入信号生成
+            #         df_buy = df[(df['upper_rate'] - df['pct']) > (df['upper_rate'] / 3)]  # 过滤掉上涨空间还有三分之一的股票                         
+            #         df_buy = df_buy[df_buy['close'] > df_buy['open']]  # 只买红票
+            #         df_buy = df_buy[df_buy['pct'] < 5]  # 只买红票
+            #         price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
+            #         df_buy = df_buy.head(5)  # 只买最强的5个股票
+            #         orderMessages = [OrderMessage(strategyName=self.name, symbol=row['code'], price=min(round(
+            #             row['close'] * price_rate, 2), row['upper_limit_y']), pct=row['pct'], index=ganzhou_index) for index, row in df_buy.iterrows()]
+            #         pub.sendMessage(str(TradeSignalTopic.BATCH_BUY), message=orderMessages) 
+            #       else:   # 下午两点之后只卖不买
+            #         # 卖出信号生成
+            #         sell_message = OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)
+            #         pub.sendMessage(str(TradeSignalTopic.SELL),message=sell_message)
+            #     elif 0.12 <= ganzhou_index < 0.22: # 情绪良好,多买少卖
+            #       if (now.hour==9 and now.minute <=45) :   # 开盘15分钟只买不卖
+            #         if now.minute >10:
+            #           # 卖出信号生成，不涨停就先卖出1/2                   
+            #           sell_message = OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)
+            #           pub.sendMessage(str(TradeSignalTopic.SELL_HALF),message=sell_message)                     
+            #         # 买入信号生成
+            #         df_buy = df[(df['upper_rate'] - df['pct']) > (df['upper_rate'] / 5)]  # 过滤掉当日上涨空间已经不多的股票                    
+            #         df_buy = df_buy[df_buy['close'] > df_buy['open']]  # 只买红票
+            #         price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
+            #         df_buy = df_buy.head(10)  # 只买最强的10个股票
+            #         orderMessages = [OrderMessage(strategyName=self.name, symbol=row['code'], price=min(round(
+            #             row['close'] * price_rate, 2), row['upper_limit_y']), pct=row['pct'], index=ganzhou_index) for index, row in df_buy.iterrows()]
+            #         pub.sendMessage(str(TradeSignalTopic.BATCH_BUY), message=orderMessages) 
+            #       elif (now.hour == 9 and now.minute > 45) or (9 < now.hour <= 14) :  # 下午两点之前只买不卖
+            #         # 买入信号生成
+            #         df_buy = df[(df['upper_rate'] - df['pct']) > (df['upper_rate'] / 3)]  # 过滤掉上涨空间还有三分之一的股票                         
+            #         df_buy = df_buy[df_buy['close'] > df_buy['open']]  # 只买红票
+            #         df_buy = df_buy[df_buy['pct'] < 5]  # 只买红票
+            #         price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
+            #         df_buy = df_buy.head(10)  # 只买最强的10个股票
+            #         orderMessages = [OrderMessage(strategyName=self.name, symbol=row['code'], price=min(round(
+            #             row['close'] * price_rate, 2), row['upper_limit_y']), pct=row['pct'], index=ganzhou_index) for index, row in df_buy.iterrows()]
+            #         pub.sendMessage(str(TradeSignalTopic.BATCH_BUY), message=orderMessages) 
+            #       else:   # 下午两点之后只卖不买
+            #         # 卖出信号生成                    
+            #         sell_message = OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)
+            #         pub.sendMessage(str(TradeSignalTopic.SELL),message=sell_message)
+            #     elif 0.22 <= ganzhou_index < 0.33: # 情绪很好,只买不卖
+            #       if (now.hour==9 and now.minute <=45) :   # 开盘15分钟
+            #         if now.minute >10:
+            #           # 卖出信号生成，不涨停就先卖出                   
+            #           sell_message = OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)
+            #           pub.sendMessage(str(TradeSignalTopic.SELL),message=sell_message)                     
+            #         # 买入信号生成
+            #         df_buy = df[(df['upper_rate'] - df['pct']) > (df['upper_rate'] / 5)]  # 过滤掉当日上涨空间已经不多的股票                    
+            #         df_buy = df_buy[df_buy['close'] > df_buy['open']]  # 只买红票
+            #         price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
+            #         df_buy = df_buy.head(10)  # 只买最强的10个股票
+            #         orderMessages = [OrderMessage(strategyName=self.name, symbol=row['code'], price=min(round(
+            #             row['close'] * price_rate, 2), row['upper_limit_y']), pct=row['pct'], index=ganzhou_index) for index, row in df_buy.iterrows()]
+            #         pub.sendMessage(str(TradeSignalTopic.BATCH_BUY), message=orderMessages) 
+            #         # 卖出信号生成，不涨停就卖                   
+            #         sell_message = OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)
+            #         pub.sendMessage(str(TradeSignalTopic.SELL_HALF),message=sell_message)                    
+            #       elif (now.hour == 9 and now.minute > 45) or (9 < now.hour <= 14) :  # 下午两点之前只买不卖
+            #         # 买入信号生成
+            #         df_buy = df[(df['upper_rate'] - df['pct']) > (df['upper_rate'] / 3)]  # 过滤掉上涨空间还有三分之一的股票                         
+            #         df_buy = df_buy[df_buy['close'] > df_buy['open']]  # 只买红票
+            #         df_buy = df_buy[df_buy['pct'] < 5]  # 只买红票
+            #         price_rate = 1 + ganzhou_index / 100  # 价格调整比例,情绪越好，挂价越高于现价，情绪越差，挂价越低于现价
+            #         df_buy = df_buy.head(10)  # 只买最强的10个股票
+            #         orderMessages = [OrderMessage(strategyName=self.name, symbol=row['code'], price=min(round(
+            #             row['close'] * price_rate, 2), row['upper_limit_y']), pct=row['pct'], index=ganzhou_index) for index, row in df_buy.iterrows()]
+            #         pub.sendMessage(str(TradeSignalTopic.BATCH_BUY), message=orderMessages) 
+            #       else:   # 下午两点之后锁仓
+            #         pass
+            #     elif 0.33 <= ganzhou_index <=1: # 情绪高潮,全天不买入，开盘15分钟不涨停就卖出
+            #       if (now.hour==9 and now.minute > 45):
+            #          # 卖出信号生成,开盘15分钟不涨停就卖出一半仓位                    
+            #         sell_message = OrderMessage(strategyName=self.name, symbol=None, price=None, pct=None ,index=ganzhou_index)
+            #         pub.sendMessage(str(TradeSignalTopic.SELL_HALF),message=sell_message)
+            # except Exception as e:
+            #     print(f'东方财富接口调用异常:{e}')            
             # 11、发送消息通知  
             now = datetime.now()
-            # if now.hour >= 13:  # 下午13点后，通知中会过滤掉涨幅大于10%的股票 
-            #     df = df[df["pct"] < 10 ]
-            df = df.head(self.topN)   
-            df['name'] =  df.apply(lambda row: "☀"+ row['name'] if row['is_hot_industry'] else row['name'], axis=1)     
-            wecom_msg_enabled= os.environ.get('WECOM_MSG_ENABLED').lower() == 'true'
-            if wecom_msg_enabled and df.shape[0] > 0:
-                WeComNotification().send_stock_df(title=self.name, df=df, ganzhou_index=ganzhou_index)
+            if now.hour == 9 and now.minute<= 35:  # 只在开盘5分钟内发送此类消息 
+                df = df.head(self.topN)   
+                df['name'] =  df.apply(lambda row: "☀"+ row['name'] if row['is_hot_industry'] else row['name'], axis=1)     
+                wecom_msg_enabled= os.environ.get('WECOM_MSG_ENABLED').lower() == 'true'
+                if wecom_msg_enabled and df.shape[0] > 0:
+                    WeComNotification().send_stock_df(title=self.name, df=df, ganzhou_index=ganzhou_index)
 

@@ -1,5 +1,6 @@
 import argparse
 import os
+import csv
 from typing import Tuple, Union
 import akshare as ak
 import concurrent.futures
@@ -7,15 +8,17 @@ from dotenv import load_dotenv
 import schedule
 import time
 import pandas as pd
+import pandas_ta as ta
 from threading import local, Lock
 
 from collector.akshare_data_collector import AkshareDataCollector
 from core.constants import Constants
-from core.topic import TradeSignalTopic
+from core.topic import FavorSignalTopic, TradeSignalTopic
 from filter.filter_chain import FilterChain
 from filter.fund.fund_filter import NameFilter, SymbolFilter, TotalCapitalFilter
 from notification.wecom import WeCom, WeComNotification
-from pool.pool import AmountStockPool, FavorStockPool, HotSymbolStockPool
+from pool.pool import ATPStockPool, AmountStockPool, FavorStockPool, HotSymbolStockPool, TurnoverStockPool
+from radar.everyday_targets import EverydayTargetStockRadar
 from strategy.fib import FibonacciRetracement, FibonacciTradingSignal, VWAPCalculator
 from trader.base import OrderMessage
 from trader.trader_management import SimTraderManagement
@@ -64,9 +67,13 @@ def get_stock_data(stock_code,daily=False):
     stock_df = None
     if daily==False:
         dt=datetime.now()
-        if dt.hour < 9 or (dt.hour == 9 and dt.minute < 25 ):
-           dt = datetime.now() - timedelta(days=1)
+        if not is_trading_time(dt) and dt.hour< 9:
+            delta = 3 if dt.weekday() == 0 else  2 if dt.weekday() == 6 else 1
+            if dt.weekday()<5 and dt.hour > 15:
+               delta=0 
+            dt = datetime.now() - timedelta(days=delta)
         today=dt.strftime("%Y-%m-%d")
+            
         stock_df =  ak.stock_zh_a_hist_min_em(symbol=stock_code, period="1",  start_date=f"{today} 09:25:00", adjust="")
         #stock_df =  ak.stock_zh_a_hist_pre_min_em(symbol=stock_code, start_time="09:25:00")
         # print(stock_df.columns)
@@ -84,11 +91,22 @@ def get_stock_data(stock_code,daily=False):
     stock_df['close'] = stock_df['close'].astype(float)
     stock_df['volume'] = stock_df['volume'].astype(int)
     stock_df=stock_df[stock_df['volume']> 0]
+    
+    # 打开文件，追加模式 ('a')，如果文件不存在，将会自动创建
+    # filename = f'results/process_{stock_code}.csv'
+    # with open(filename, 'a', newline='') as file:
+    #     # 创建 CSV writer 对象
+    #     writer = csv.writer(file)
+
+    #     new_row = stock_df.iloc[-1].tolist()                
+    #     # 将新的元组写入 CSV 文件
+    #     writer.writerow(new_row) 
     return stock_df  
 def get_stock_high_and_low(stock_code,date:str,length:int=10) -> Tuple[float,float]:
-    start_date = datetime.strptime(date, "%Y%m%d") - timedelta(days=length)
+    start_date = datetime.strptime(date, "%Y%m%d") - timedelta(days=200)
     start_date = start_date.strftime("%Y%m%d")
     stock_df =  ak.stock_zh_a_hist(symbol=stock_code, period="daily",  start_date=start_date, end_date=date, adjust="")
+    stock_df = stock_df.tail(length)
     stock_df.rename(
         columns={"日期":"time","开盘":"open","最高":"high","最低":"low","收盘":"close","成交量":"volume","成交额":"amount"},inplace=True)
     stock_df['open'] = stock_df['open'].astype(float)
@@ -135,13 +153,18 @@ def draw(df_signal,symbol,name):
     df=df_signal.copy()
     # print(df.columns)
     df["time"] =pd.to_datetime(df["time"])
+    dt =df.iloc[0]["time"].date()
     df.set_index('time', inplace=True)
 
     buy_signals = df[df['signal'] == "B"]
     sell_signals = df[df['signal'] == "S"] 
     # fig = plt.figure(figsize=(16, 12))
-    df['R1W'] = df['R1'].rolling(window=5).mean()
-    df['S1W'] = df['S1'].rolling(window=5).mean()           
+    if len(df) >5:
+        df['R1W'] = df['R1'].rolling(window=5).mean()
+        df['S1W'] = df['S1'].rolling(window=5).mean() 
+    else:
+        df['R1W'] = df['R1']
+        df['S1W'] = df['S1']                  
     apds = [
         mpf.make_addplot(df['R1W'], color='blue', linestyle='-',width=0.4, label='R1'),
         mpf.make_addplot(df['S1W'], color='red', linestyle='-',width=0.4, label='S1')
@@ -165,20 +188,27 @@ def draw(df_signal,symbol,name):
         market_colors = mpf.make_marketcolors(up='r', down='g', edge='i', wick='i', volume='i')
         custom_style = mpf.make_mpf_style(marketcolors=market_colors)
 
-        mpf.plot(df, type='candle', style=custom_style, addplot=apds, volume=True, figsize=(12, 6), title='{} {}'.format(symbol, name))
+        mpf.plot(df, type='candle', style=custom_style, addplot=apds, volume=True, figsize=(12, 6), title='{} {} {}'.format(dt,symbol, name))
         if not buy_signals.empty or not sell_signals.empty:
-            save_path = "{}_{}.png".format(symbol, name)
+            save_path = "results/{}/{}_{}.png".format(dt, symbol, name)
+            directory = os.path.dirname(save_path)
+            if not os.path.exists(directory):
+                os.makedirs(directory)            
+            
             plt.savefig(save_path)
             time.sleep(0.5)
             plt.close()
-            print(f"Chart saved as {save_path}")
+            # print(f"Chart saved as {save_path}")
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
         plt.close()
     
+
+all_signal_df =pd.DataFrame()
 # 定义处理单只股票的函数
 def process_stock_data(stock):
+    global all_signal_df
     stock_symbol=stock["code"]
     stock_name=stock["name"]
     global thread_data
@@ -201,11 +231,12 @@ def process_stock_data(stock):
       try:
           # 获取股票的分时数据
           all_data = get_stock_data(stock_symbol,args.daily)
+        #   all_data = all_data.head(45)
+        #   print(all_data)
           all_data['signal'] = ""
           all_data['R1']=0.0
           all_data['S1']=0.0
-          # generator = generate_data_chunks(all_data, period=0.2)
-          generator = generate_data_chunks(all_data, period=0.1)
+          generator = generate_data_chunks(all_data, period=0.02)
           stock_tick_df=None
           while stock_tick_df is None or len(stock_tick_df) < len(all_data): 
             if args.dev:                     
@@ -214,76 +245,93 @@ def process_stock_data(stock):
               stock_tick_df = all_data
             stock_tick_df=stock_tick_df.copy()
             # 更新最高价和最低价
-          #   high = stock_tick_df['high'].max()
-          #   low = stock_tick_df['low'].min()  
+            high_now = stock_tick_df['high'].max()
+            low_now = stock_tick_df['low'].min()  
             dt = stock_tick_df.iloc[-1]['time'] if args.daily else datetime.strptime(stock_tick_df.iloc[-1]['time'], "%Y-%m-%d %H:%M:%S") 
-            dt = dt.strftime("%Y%m%d")
-            high,low = get_stock_high_and_low(stock_symbol,dt,length=1) 
-          
-          #   print(stock_name,stock_tick_df.iloc[-1]["time"],stock_tick_df.iloc[-1]["close"],high,low)
+            # if dt.hour == 9 or (dt.hour == 10 and dt.minute <= 30) :
+            if 9 <= dt.hour < 16 :
+                dt = dt - timedelta(days=1)
+                dt = dt.strftime("%Y%m%d")
+                high,low = get_stock_high_and_low(stock_symbol,dt,length=3) 
+                high = max(high,high_now)
+                low = min(low,low_now)
+            else:
+                high = high_now
+                low = low_now 
+            # print(dt,high,low )
             volume = stock_tick_df['volume'].sum()        
             amount = stock_tick_df['amount'].sum()        
             thread_data.high[stock_symbol] = high
             thread_data.low[stock_symbol] = low
             thread_data.fibonacciTradingSignal[stock_symbol] = FibonacciTradingSignal(high=thread_data.high[stock_symbol],low=thread_data.low[stock_symbol])
             # 计算移动平均
-            stock_tick_df['short_ma'] = round(stock_tick_df['close'].rolling(window=5).mean(),2)
-            stock_tick_df['long_ma'] = round(stock_tick_df['close'].rolling(window=20).mean(),2)
+            stock_tick_df['price3'] = (stock_tick_df['high'] + stock_tick_df['low'] + stock_tick_df['close']) / 3
+            # stock_tick_df['short_ma'] = round(stock_tick_df['price3'].rolling(window=15).mean(),3)
+            # stock_tick_df['long_ma'] = round(stock_tick_df['price3'].rolling(window=30).mean(),3)
+            # if len(stock_tick_df) < 30:continue
+            stock_tick_df['short_ma'] = ta.ema(close=stock_tick_df.close,  length=5)
+            stock_tick_df['long_ma'] = ta.ema(close=stock_tick_df.close,  length=15)
             short_ma = stock_tick_df.iloc[-1]['short_ma']
             long_ma = stock_tick_df.iloc[-1]['long_ma']
+            # short_ma = stock_tick_df.iloc[-1]['close'] if pd.isna(short_ma) else short_ma
+            # long_ma = stock_tick_df.iloc[-1]['close'] if pd.isna(long_ma) else long_ma
             thread_data.short_ma[stock_symbol] = short_ma
             thread_data.long_ma[stock_symbol] = long_ma
             latest_data = stock_tick_df.iloc[-1].to_dict()
             # 更新VWAP
-            thread_data.vwap_calculator[stock_symbol].update(latest_data['close'], latest_data['volume'])
-            vwap = thread_data.vwap_calculator[stock_symbol].calculate()
-            
+            # thread_data.vwap_calculator[stock_symbol].update(latest_data['close'], latest_data['volume'])
+            # vwap = thread_data.vwap_calculator[stock_symbol].calculate()
+            stock_tick_df_temp = stock_tick_df.copy()  
+            stock_tick_df_temp['datetime'] = pd.to_datetime(stock_tick_df_temp['time'])
+            stock_tick_df_temp.set_index('datetime', inplace=True)
+            stock_tick_df_temp.sort_index()
+            stock_tick_df_temp['vwap']= ta.vwap(high=stock_tick_df_temp.high,
+                                           low=stock_tick_df_temp.low,
+                                           close=stock_tick_df_temp.close,
+                                           volume=stock_tick_df_temp.volume)
+            vwap = stock_tick_df_temp.iloc[-1]['vwap']
             if not args.dev: 
               for index, row in stock_tick_df.iterrows():
-                  signal,resistances, supports = thread_data.fibonacciTradingSignal[stock_symbol].generate_signal(currentPrice = row['close'],threshold=0.02)
+                  signal,resistances, supports = thread_data.fibonacciTradingSignal[stock_symbol].generate_signal(currentPrice = row['close'],threshold=0.02,ganzhou_index=ganzhou_index)
                   all_data.loc[index,'R1']= resistances[0]   
                   all_data.loc[index,'S1']= supports[0]            
             
             # # 生成斐波那契回撤信号并用VWAP加强
             try:
-              signal,resistances, supports = thread_data.fibonacciTradingSignal[stock_symbol].generate_signal(currentPrice = latest_data['close'],threshold=0.02)
+              signal,resistances, supports = thread_data.fibonacciTradingSignal[stock_symbol].generate_signal(currentPrice = latest_data['close'],threshold=0.02,ganzhou_index=ganzhou_index)
             except Exception as e:
                 continue
             if signal == 'buy' and latest_data['close'] < vwap:
                 strong_signal = 'strong_buy'
-            elif signal == 'sell' and latest_data['close'] > vwap:
+            elif signal == 'sell' and latest_data['close'] >= vwap:
                 strong_signal = 'strong_sell'
             else:
                 strong_signal = 'hold'
-          #   print(thread_data.fibonacciTradingSignal[stock_symbol].fib_levels)
-          #   print(stock_name,high,low,latest_data['close'], signal,resistances, supports,strong_signal)
-
             # 使用均线交叉进一步处理信号
-            ma_cross_up = short_ma > long_ma  # and latest_data['close'] > short_ma
-            ma_cross_down = short_ma <= long_ma # and latest_data['close'] < short_ma
-            if ma_cross_up and strong_signal == 'strong_buy':
-                final_signal = 'strong_buy'
-            elif ma_cross_down and strong_signal == 'strong_sell':
-                final_signal = 'strong_sell'
-            else:
-                final_signal = 'hold'
             latest_data['vwap'] = vwap
             latest_data['signal'] = signal
-            latest_data['strong_signal'] = strong_signal
-            latest_data['final_signal'] = final_signal 
+            latest_data['strong_signal'] = strong_signal            
+            if pd.isna(long_ma):
+                latest_data['final_signal'] = strong_signal 
+                final_signal = strong_signal
+            else:
+                ma_cross_up = short_ma > long_ma  and latest_data['close'] > short_ma
+                ma_cross_down = short_ma <= long_ma and latest_data['close'] <= short_ma
+                if ma_cross_up and strong_signal == 'strong_buy':
+                    final_signal = 'strong_buy'
+                elif ma_cross_down and strong_signal == 'strong_sell':
+                    final_signal = 'strong_sell'
+                else:
+                    final_signal = 'hold'
+                latest_data['final_signal'] = final_signal 
             
             ind=stock_tick_df.index[-1]
-          #   print(ind, stock_name,latest_data['close'], resistances, supports,signal,strong_signal,final_signal)
+            # print(latest_data['time'],high,low, stock_name,latest_data['close'], resistances, supports,signal,strong_signal,final_signal)
             all_data.loc[ind,'R1']= resistances[0]   
             all_data.loc[ind,'S1']= supports[0]   
-          #   all_data.loc[ind,'R1']=resistances[1] if len(resistances)>1 else resistances[0]   
-          #   all_data.loc[ind,'S1']=supports[1] if len(supports)>1 else supports[0]   
 
-          #   if latest_data['final_signal'] != 'hold':
-            latest_data['final_signal'] = strong_signal
             if latest_data['final_signal'] != 'hold':
-              strategyName = "大笔买入"            
-              # date_object = datetime.strptime(latest_data['time'], "%Y-%m-%d %H:%M:%S")
+              strategyName = "择时优选"            
               date_object = latest_data['time'] if args.daily else datetime.strptime(latest_data['time'], "%Y-%m-%d %H:%M:%S")
               pct =round(100* (latest_data['close'] - stock["close_yesterday"]) /stock["close_yesterday"] ,2)
               turnover =round(100 * volume / (stock["circulating_capital"] / stock["close"]) ,2)
@@ -296,7 +344,7 @@ def process_stock_data(stock):
                               "high":high,
                               "low":low,
                               "pct":pct,
-                              "turnover":turnover,
+                              "turnover":100 * turnover,
                               "amount":amount,
                               "price":latest_data['close'],
                               "index":ganzhou_index,
@@ -305,19 +353,72 @@ def process_stock_data(stock):
                               }
 
               if latest_data['final_signal'] == "strong_buy":
-                all_data.loc[ind,'signal']='B'
-                traderMessage["price"] = round(supports[0] + 0.01,2)  # 在第一支撑位之上挂单
-                pub.sendMessage(str(TradeSignalTopic.BUY), message=traderMessage)  
-              elif latest_data['final_signal'] == "strong_sell":
-                all_data.loc[ind,'signal']='S'
-                traderMessage["price"] = round(resistances[0] - 0.01,2) # 在第一阻力位位之下挂单
-                pub.sendMessage(str(TradeSignalTopic.SELL),message=traderMessage)          
+                if latest_data['close'] != stock['lower_limit']:
+                    all_data.loc[ind,'signal']='B'
+                    traderMessage["price"] = round(supports[0] + 0.01,2)  # 在第一支撑位之上挂单
+                    all_data.loc[ind,'price']=round(supports[0] + 0.01,2)
+                    if not args.dev: 
+                        favor_message={
+                        "group_name": '买信号',
+                        "symbols": [stock_symbol],
+                        "daily":True
+                        }                        
+                        pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)                         
+                        pub.sendMessage(str(TradeSignalTopic.BUY), message=traderMessage)
+                elif turnover > 0.1:
+                    all_data.loc[ind,'signal']='B' 
+                    traderMessage["price"] = latest_data['close']  # 跌停价买入
+                    all_data.loc[ind,'price']=latest_data['close']
+                    if not args.dev: 
+                        favor_message={
+                        "group_name": '买信号',
+                        "symbols": [stock_symbol],
+                        "daily":True
+                        }                        
+                        pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)                         
+                        pub.sendMessage(str(TradeSignalTopic.SELL),message=traderMessage)                     
+                else:                   
+                    pass   # 低换手跌停不买                             
+              elif latest_data['final_signal'] == "strong_sell" :
+                if latest_data['close'] != stock['upper_limit']: 
+                    all_data.loc[ind,'signal']='S'
+                    traderMessage["price"] = round(resistances[0] - 0.01,2) # 在第一阻力位位之下挂单
+                    all_data.loc[ind,'price']=round(resistances[0] - 0.01,2)
+                    if not args.dev:
+                        favor_message={
+                        "group_name": '卖信号',
+                        "symbols": [stock_symbol],
+                        "daily":True
+                        }                        
+                        pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)                         
+                        pub.sendMessage(str(TradeSignalTopic.SELL),message=traderMessage)                     
+                elif turnover > 0.1:
+                    all_data.loc[ind,'signal']='S' 
+                    traderMessage["price"] = latest_data['close']  # 涨停价卖出
+                    all_data.loc[ind,'price']=latest_data['close']
+                    if not args.dev: 
+                        favor_message={
+                        "group_name": '卖信号',
+                        "symbols": [stock_symbol],
+                        "daily":True
+                        }                        
+                        pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)                         
+                        pub.sendMessage(str(TradeSignalTopic.SELL),message=traderMessage)                     
+                else:                   
+                    pass   # 低换手涨停不卖      
             else:
               pass
-          # print(f"{stock_name}",all_data[["time","close","R1","S1","signal"]].head(50))
-          if (all_data['signal'] == "B").any() or (all_data['signal'] == "S").any():
-              # with Lock():
-                  draw(all_data, stock_symbol, stock_name)
+          if args.dev and ((all_data['signal'] == "B").any() or (all_data['signal'] == "S").any()):
+              draw(all_data, stock_symbol, stock_name +"_" + date_object.strftime("%H%M"))
+              all_data['code'] = stock_symbol
+              all_data['name'] = stock_name
+              all_data['final_close'] = all_data.iloc[-1]['close']
+              all_data['diff'] = round(all_data['final_close'] - all_data['price'],2)
+              all_data_has_signal =all_data[(all_data['signal'] == "B") | (all_data['signal'] == "S")]
+              all_data_has_signal=all_data_has_signal[["time","code","name","signal","price","final_close","diff"]]
+              all_signal_df=pd.concat([all_signal_df, all_data_has_signal], ignore_index=True)
+              all_signal_df.to_csv(f'results/csv/{date_object.strftime("%Y-%m-%d")}.csv', index=False,encoding='utf_8_sig')
+                           
       except Exception as e:
           print(f"处理股票 {stock_symbol} 时发生错误: {e}")
 
@@ -325,7 +426,10 @@ def process_stock_data(stock):
 def job():           
     global ganzhou_index
     # 计算情绪指数
-    ganzhou_index =compute_market_sentiment_index()
+    try:
+        ganzhou_index = compute_market_sentiment_index()
+    except Exception as e:
+        print(f'计算情绪指数时发生错误: {e}')
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         # 1 准备市场行情快照，获取股票代码、名称、总市值、PE、PB等指标，用于筛选股票
@@ -333,37 +437,41 @@ def job():
           akshareDataCollector = AkshareDataCollector()
           market_spot_df = akshareDataCollector.get_stock_zh_a_spot_em()
           # market_spot_df = akshareDataCollector.get_fund_etf_spot_em()
-          market_spot_df = market_spot_df[Constants.SPOT_EM_COLUMNS]
+        #   market_spot_df = market_spot_df[Constants.SPOT_EM_COLUMNS]
       except Exception as e:
           print(f'Akshare接口调用异常{e}')
           return
       # 2、准备主股票池和其他附加股票池        
       # favorStockPool =FavorStockPool(["自选股","仓","大笔买全榜","热股强全榜"])
-      favorStockPool =FavorStockPool(["大笔买全榜","热股强全榜"])
+      favorStockPool =FavorStockPool(["强","每日情全榜","大笔买全榜","热股强全榜"])
       # favorStockPool =FavorStockPool(["ETF"])
-      stockPools = [favorStockPool]
+      stockPools = [favorStockPool,ATPStockPool(k=200)]
       symbols = []
       for stockPool in stockPools:
           symbols += stockPool.get_symbols()
+    #   turnoverTopN = AmountStockPool().get_symbols(cloumn_name="turnover",k=100) 
+    #   unique_stocks = set(symbols) | set(turnoverTopN)
+    #   symbols = list(unique_stocks)          
       # 3、先对symbols进行基本面过滤,以便减少后续计算量
       symbols_spot_df = market_spot_df[market_spot_df['code'].isin(symbols)]
       fand_filter_list = [SymbolFilter(),
                           NameFilter(),
-                          TotalCapitalFilter(min_threshold=20, max_threshold=1200),  # 总市值过滤
+                          TotalCapitalFilter(min_threshold=40, max_threshold=1200),  # 总市值过滤
                           ]
       fand_filter_chain = FilterChain(fand_filter_list)
       symbols_spot_df = fand_filter_chain.apply(symbols_spot_df)
-      # print(symbols_spot_df)
+      print("股票池：",len(symbols_spot_df))
       # symbols = symbols_spot_df[['code',"name","open","high","low","pct","amount","volume_ratio","turnover","5_minute_change"]].values.tolist()
       # symbols = symbols_spot_df[['code',"name","open","high","low","pct","amount","volume_ratio","turnover","5_minute_change"]].to_dict('records')
       # symbols = symbols_spot_df.tail(1).to_dict('records')
       symbols = symbols_spot_df.to_dict('records')
       if args.mt:
-          print("多线程处理股票")
           executor.map(process_stock_data, symbols)
       else:
         for symbol in symbols:
-            # if symbol['code'] == '300364':
+            # if symbol['code'] == '002520':  #001298
+            # if symbol['code'] == '600187':
+            # if symbol['code'] == '000536':  #华映科技
             process_stock_data(symbol)
         
 def is_trading_time(now):
@@ -402,7 +510,10 @@ def main():
                         help='Set k line is daily true') 
     parser.add_argument('--mt', action='store_true',
                         help='Set multithread true')       
-    args = parser.parse_args()     
+    args = parser.parse_args()  
+    os.environ['DEV_MODE'] = str(args.dev)
+    os.environ['DAILY_MODE'] = str(args.daily)
+    os.environ['MULTITHREAD'] = str(args.mt)       
     # load_dotenv()  # Load environment variables from .env file
     os.environ.pop("EM_APPKEY")
     os.environ.pop("EM_HEADER")
@@ -412,7 +523,7 @@ def main():
    
     load_dotenv() 
     um = UserManagement()  # 启动用户的自选股更新信号侦听
-    # um.startWatch()    
+    um.startWatch()    
     stm = SimTraderManagement()  # 启动模拟账户的模拟交易信号侦听
     stm.startWatch()      
     weComNotification = WeComNotification()  # 启动企业微信通知侦听
@@ -420,11 +531,17 @@ def main():
     if args.dev:
         job()
     else:
-        # 定时任务，每30秒执行一次
-        schedule.every(60).seconds.do(timed_job)
+        # 定时任务，每60秒执行一次，会丢数据，改成45秒执行一次
+        schedule.every(45).seconds.do(timed_job)
         # 运行定时任务
         while True:
             schedule.run_pending()
             time.sleep(1)
 if __name__ == "__main__":   
     main()        
+    
+    
+    
+# real    144m8.756s
+# user    17m21.212s
+# sys     0m57.951s

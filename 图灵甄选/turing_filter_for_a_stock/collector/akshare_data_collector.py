@@ -57,7 +57,7 @@ class AkshareDataCollector(DataCollector):
         return df
     def get_stock_hot_rank(self)->pd.DataFrame:
         """
-        获取特定事件（如大笔买入）的股票热度排名数据。
+        获取股票热度排名数据。
         Returns:
             pd.DataFrame: 返回一个pandas DataFrame对象，包含了指定事件的股票热度排名数据。
         """
@@ -69,7 +69,7 @@ class AkshareDataCollector(DataCollector):
             ~(df['name'].apply(str).str.startswith('N')) & 
             ~(df['name'].apply(str).str.startswith('C'))       
             ]
-        return df
+        return df[(df['price'] < 100) & (df['pct'].abs() > 4)]
     def get_jingjia_rise_event(self)->pd.DataFrame:
         """
         获取特定事件（如快速反弹）的股票变动数据。        
@@ -187,7 +187,7 @@ class AkshareDataCollector(DataCollector):
         limit_ratio = 0.3 if symbol.startswith('4') else limit_ratio # 北交所
         
         now = datetime.now()
-        close_column = "close_yesterday" if (10 <= now.hour <= 15) or (now.hour == 9 and now.minute > 20 ) else "close"  # 开市期间取上个交易日收盘价，否则取当日收盘价
+        close_column = "close_yesterday" if (10 <= now.hour <= 23) or (now.hour == 9 and now.minute > 20 ) else "close"  # 开市期间取上个交易日收盘价，否则取当日收盘价
       
         upper_limit_price, lower_limit_price = self.calculate_limit_prices( row[close_column], limit_ratio=limit_ratio)      
         return (upper_limit_price, lower_limit_price)
@@ -197,6 +197,14 @@ class AkshareDataCollector(DataCollector):
         df.drop(columns=['涨跌额'], inplace=True)
         df.drop(columns=['涨速'], inplace=True)
         df.columns = list(Constants.SPOT_EM_COLUMNS)
+        df =df[~(df['code'].apply(str).str.startswith('8')) & 
+            ~(df['code'].apply(str).str.startswith('4')) &
+            ~(df['code'].apply(str).str.startswith('68')) &
+            ~(df['name'].apply(str).str.startswith('ST')) & 
+            ~(df['name'].apply(str).str.startswith('*'))  & 
+            ~(df['name'].apply(str).str.startswith('N')) & 
+            ~(df['name'].apply(str).str.startswith('C'))       
+            ]        
          # 计算涨跌停价 
         df['upper_limit'] = df.apply(lambda row: self.__get_limit_price__(row)[0] ,axis=1 )
         df['lower_limit'] = df.apply(lambda row: self.__get_limit_price__(row)[1] ,axis=1 )
@@ -284,7 +292,7 @@ class AkshareDataCollector(DataCollector):
             return None
         n = n - 4 if n >= 5 else 0  # 9:27-9:30之间，不取数据
         for index,row in industry_df.iterrows():  
-            if index < 8:   # 热门行业前8个
+            if index < 3:   # 热门行业前3个
                 stock_df = ak.stock_board_industry_cons_em(symbol=row['板块名称'])
                 stock_df = stock_df[stock_df['代码'].astype(str).str[:1].isin(['0','3','6'])] 
                 stock_df['amount_rank'] = stock_df['成交额'].rank(method='dense',ascending=False)

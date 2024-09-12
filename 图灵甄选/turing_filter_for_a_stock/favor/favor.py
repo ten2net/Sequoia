@@ -150,7 +150,7 @@ class FavorForEM(Favor):
             "scs":codeList
         }
         url = self.__build_url__(action="aslot",params=params)
-        resp = self.session.get(url, headers=self.HEADER)
+        resp = requests.get(url, headers=self.HEADER)
         # print(resp.text)
     def del_symbols_from_group(self, 
             codes, entity_type="stock", group_name=None, group_id=None
@@ -208,10 +208,10 @@ class FavorForEM(Favor):
         resp = self.session.get(url, headers=self.HEADER)
 
         return self.__parse_resp__(resp)
-    def update_favor(self, symbols: List[str] = [], group_name: str = "斐纳斯精选"):
+    def update_favor(self, symbols: List[str] = [], group_name: str = "斐纳斯精选",daily=False):
         self.__update_favor_list__(
-            symbols, group_full_name=f"{group_name[:3]}全榜", group_new_name=group_name)
-    def __update_favor_list__(self, symbol_list:list[str],group_full_name:str ,group_new_name:str):
+            symbols, group_full_name=f"{group_name[:3]}全榜", group_new_name=group_name,daily=daily)
+    def __update_favor_list__(self, symbol_list:list[str],group_full_name:str ,group_new_name:str,daily=False):
         # 添加到东方财富自选股
         # group_new_name中只包含最新的出票
         group_id_new = self.get_group_id(group_new_name)
@@ -219,20 +219,19 @@ class FavorForEM(Favor):
             self.create_group(group_new_name)
         else:
             # 删除上一榜出票
-            self.del_all_from_group( group_name=group_new_name, entity_type="stock")            
+            self.del_all_from_group( group_name=group_new_name, entity_type="stock")  
         # group_full_name中包含全部的出票
         group_id_full = self.get_group_id(group_full_name)
         if not group_id_full:          
             self.create_group(group_full_name) 
         else:
             now = datetime.now()
-            if now.hour< 9:   # 删除前一天的出票
-              self.del_all_from_group( group_name=group_full_name, entity_type="stock")  
+            if now.hour< 9 or (now.hour== 9 and now.minute < 26):   # 删除前一天的出票
+                self.del_all_from_group( group_name=group_full_name, entity_type="stock")  
            
         # 添加自选 
-        now = datetime.now()
-        if now.hour< 9 : return  # 只在交易时段更新
-        group_name_list = [group_new_name,group_full_name] 
+        # group_name_list =[group_full_name] if daily else [group_new_name,group_full_name] 
+        group_name_list =[group_new_name,group_full_name] 
         for group_name in group_name_list:       
             self.add_symbols_to_group(symbol_list, group_name=group_name, entity_type="stock")
             
