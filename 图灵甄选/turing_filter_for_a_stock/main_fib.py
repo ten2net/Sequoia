@@ -344,7 +344,7 @@ def process_stock_data(stock):
                               "high":high,
                               "low":low,
                               "pct":pct,
-                              "turnover":100 * turnover,
+                              "turnover":round(100 * turnover,2),
                               "amount":amount,
                               "price":latest_data['close'],
                               "index":ganzhou_index,
