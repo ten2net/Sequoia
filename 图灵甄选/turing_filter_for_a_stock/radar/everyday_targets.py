@@ -17,7 +17,7 @@ from pubsub import pub
 from trader.base import OrderMessage
 
 class EverydayTargetStockRadar(StockRadar):
-    def __init__(self, name: str = "每日情绪榜", topN: int = 200):
+    def __init__(self, name: str = "每日情绪榜", topN: int = 300):
         self.name = name
         self.topN = topN # min(topN, 22)
 
@@ -38,19 +38,16 @@ class EverydayTargetStockRadar(StockRadar):
         symbols = []
         for stockPool in stockPools:
             symbols += stockPool.get_symbols()
-        # symbols=[symbol[2:] for symbol in symbols ]   
-        # turnoverTopN = AmountStockPool().get_symbols(cloumn_name="turnover",k=100) 
-        # unique_stocks = set(symbols) | set(turnoverTopN)
-        # symbols = list(unique_stocks)
-                
         # 3、先对symbols进行基本面过滤,以便减少后续计算量
         symbols_spot_df = market_spot_df[market_spot_df['code'].isin(symbols)]
+        print("symbols_spot_df=",  len(symbols_spot_df))
         fand_filter_list = [SymbolFilter(),
                             NameFilter(),
-                            TotalCapitalFilter(min_threshold=40, max_threshold=800),  # 总市值过滤
+                            TotalCapitalFilter(min_threshold=15, max_threshold=1500),  # 总市值过滤
                             ]
         fand_filter_chain = FilterChain(fand_filter_list)
         symbols_spot_df = fand_filter_chain.apply(symbols_spot_df)
+        print("fand_filter_chain=",  len(symbols_spot_df))
         symbols = symbols_spot_df['code'].tolist()
         # 4、获取股票数据，并附加其他指标
         # df = mainStockPool.get_data_with_indictores(symbols,withCDL=False)
@@ -61,19 +58,21 @@ class EverydayTargetStockRadar(StockRadar):
         df = df.merge(market_spot_df, on="code", how="left")
         # 6、筛选股票，实现单独的过滤器，添加到过滤器链中即可
         filters = [
-            AmountFilter(threshold=2),  # 昨日成交额过滤器，过滤掉成交额太小的股票
+            AmountFilter(threshold=1.2),  # 昨日成交额过滤器，过滤掉成交额太小的股票
             HighVolumeFilter(threshold=2), # 昨日成交量过滤器，过滤掉成交量大于5日均量2倍的股票
         ]
         filter_chain = FilterChain(filters)
         df = filter_chain.apply(df)
+        print("filters=",  len(df))
         # 9、自选股
         results = df['code'].tolist()
-        results=results[:46]  # 每次最多添加46个，否则接口报Connection reset by peer错误
         results = results[::-1]  # 确保新加自选的在上面
-        favor_message={
-          "group_name": self.name,
-          "symbols": results,
-          "daily":True
-        }
-        pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)
+        split_results = [results[i:i + 45] for i in range(0, len(results), 45)] # 每次最多添加46个，否则接口报Connection reset by peer错误
+        for batch in split_results: 
+            favor_message={
+            "group_name": self.name,
+            "symbols": batch,
+            "daily":True
+            }
+            pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)
 
