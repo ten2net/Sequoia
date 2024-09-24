@@ -91,16 +91,6 @@ def get_stock_data(stock_code,daily=False):
     stock_df['close'] = stock_df['close'].astype(float)
     stock_df['volume'] = stock_df['volume'].astype(int)
     stock_df=stock_df[stock_df['volume']> 0]
-    
-    # 打开文件，追加模式 ('a')，如果文件不存在，将会自动创建
-    # filename = f'results/process_{stock_code}.csv'
-    # with open(filename, 'a', newline='') as file:
-    #     # 创建 CSV writer 对象
-    #     writer = csv.writer(file)
-
-    #     new_row = stock_df.iloc[-1].tolist()                
-    #     # 将新的元组写入 CSV 文件
-    #     writer.writerow(new_row) 
     return stock_df  
 def get_stock_high_and_low(stock_code,date:str,length:int=10) -> Tuple[float,float]:
     start_date = datetime.strptime(date, "%Y%m%d") - timedelta(days=200)
@@ -190,7 +180,7 @@ def draw(df_signal,symbol,name):
 
         mpf.plot(df, type='candle', style=custom_style, addplot=apds, volume=True, figsize=(12, 6), title='{} {} {}'.format(dt,symbol, name))
         if not buy_signals.empty or not sell_signals.empty:
-            save_path = "results/{}/{}_{}.png".format(dt, symbol, name)
+            save_path = "results/daily/{}_{}.png".format(symbol, name) if args.daily else "results/{}/{}_{}.png".format(dt, symbol, name)
             directory = os.path.dirname(save_path)
             if not os.path.exists(directory):
                 os.makedirs(directory)            
@@ -248,16 +238,20 @@ def process_stock_data(stock):
             high_now = stock_tick_df['high'].max()
             low_now = stock_tick_df['low'].min()  
             dt = stock_tick_df.iloc[-1]['time'] if args.daily else datetime.strptime(stock_tick_df.iloc[-1]['time'], "%Y-%m-%d %H:%M:%S") 
+          
             # if dt.hour == 9 or (dt.hour == 10 and dt.minute <= 30) :
-            if 9 <= dt.hour < 16 :
+            if not args.daily:    
                 dt = dt - timedelta(days=1)
                 dt = dt.strftime("%Y%m%d")
                 high,low = get_stock_high_and_low(stock_symbol,dt,length=3) 
                 high = max(high,high_now)
                 low = min(low,low_now)
             else:
-                high = high_now
-                low = low_now 
+                dt = dt - timedelta(days=1)
+                dt = dt.strftime("%Y%m%d")
+                high,low = get_stock_high_and_low(stock_symbol,dt,length=10) 
+                high = max(high,high_now)
+                low = min(low,low_now)                
             # print(dt,high,low )
             volume = stock_tick_df['volume'].sum()        
             amount = stock_tick_df['amount'].sum()        
@@ -365,6 +359,14 @@ def process_stock_data(stock):
                         }                        
                         pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)                         
                         pub.sendMessage(str(TradeSignalTopic.BUY), message=traderMessage)
+                    else:
+                        if date_object == all_data.iloc[-1]['time']:
+                            favor_message={
+                            "group_name": '日频优选',
+                            "symbols": [stock_symbol],
+                            "daily":True
+                            }                        
+                            pub.sendMessage(str(FavorSignalTopic.UPDATE_FAVOR),message=favor_message)                              
                 elif turnover > 0.1:
                     all_data.loc[ind,'signal']='B' 
                     traderMessage["price"] = latest_data['close']  # 跌停价买入
@@ -409,7 +411,8 @@ def process_stock_data(stock):
             else:
               pass
           if args.dev and ((all_data['signal'] == "B").any() or (all_data['signal'] == "S").any()):
-              draw(all_data, stock_symbol, stock_name +"_" + date_object.strftime("%H%M"))
+              title = stock_name +"_" + date_object.strftime("%Y-%m-%d") if args.daily else stock_name +"_" + date_object.strftime("%H%M")
+              draw(all_data, stock_symbol, title)
               all_data['code'] = stock_symbol
               all_data['name'] = stock_name
               all_data['final_close'] = all_data.iloc[-1]['close']
@@ -417,7 +420,8 @@ def process_stock_data(stock):
               all_data_has_signal =all_data[(all_data['signal'] == "B") | (all_data['signal'] == "S")]
               all_data_has_signal=all_data_has_signal[["time","code","name","signal","price","final_close","diff"]]
               all_signal_df=pd.concat([all_signal_df, all_data_has_signal], ignore_index=True)
-              all_signal_df.to_csv(f'results/csv/{date_object.strftime("%Y-%m-%d")}.csv', index=False,encoding='utf_8_sig')
+              csv_directory = "results/csv_daily" if args.daily else "results/csv"
+              all_signal_df.to_csv(f'{csv_directory}/{date_object.strftime("%Y-%m-%d")}.csv', index=False,encoding='utf_8_sig')
                            
       except Exception as e:
           print(f"处理股票 {stock_symbol} 时发生错误: {e}")
@@ -443,23 +447,13 @@ def job():
           return
       # 2、准备主股票池和其他附加股票池        
       # favorStockPool =FavorStockPool(["自选股","仓","大笔买全榜","热股强全榜"])
-      favorStockPool =FavorStockPool(["强","每日情全榜","大笔买全榜","热股强全榜"])
+      favorStockPool =FavorStockPool(["每日情全榜","大笔买全榜","热股强全榜"])
       # favorStockPool =FavorStockPool(["ETF"])
-      stockPools = [favorStockPool,ATPStockPool(k=200)]
+      stockPools = [favorStockPool]
       symbols = []
       for stockPool in stockPools:
           symbols += stockPool.get_symbols()
-    #   turnoverTopN = AmountStockPool().get_symbols(cloumn_name="turnover",k=100) 
-    #   unique_stocks = set(symbols) | set(turnoverTopN)
-    #   symbols = list(unique_stocks)          
-      # 3、先对symbols进行基本面过滤,以便减少后续计算量
       symbols_spot_df = market_spot_df[market_spot_df['code'].isin(symbols)]
-      fand_filter_list = [SymbolFilter(),
-                          NameFilter(),
-                          TotalCapitalFilter(min_threshold=40, max_threshold=1200),  # 总市值过滤
-                          ]
-      fand_filter_chain = FilterChain(fand_filter_list)
-      symbols_spot_df = fand_filter_chain.apply(symbols_spot_df)
       print("股票池：",len(symbols_spot_df))
       # symbols = symbols_spot_df[['code',"name","open","high","low","pct","amount","volume_ratio","turnover","5_minute_change"]].values.tolist()
       # symbols = symbols_spot_df[['code',"name","open","high","low","pct","amount","volume_ratio","turnover","5_minute_change"]].to_dict('records')
@@ -472,6 +466,7 @@ def job():
             # if symbol['code'] == '002520':  #001298
             # if symbol['code'] == '600187':
             # if symbol['code'] == '000536':  #华映科技
+            # if symbol['code'] == '000628' or symbol['code'] == '300086':  #高新发展
             process_stock_data(symbol)
         
 def is_trading_time(now):
