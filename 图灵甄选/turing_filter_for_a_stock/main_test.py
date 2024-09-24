@@ -3,7 +3,8 @@ import os
 from dotenv import load_dotenv
 from collector.akshare_data_collector import AkshareDataCollector
 from core.topic import FavorSignalTopic, TradeSignalTopic
-from pool.pool import ATPStockPool, AmountStockPool, FavorStockPool
+from pool.pool import ATPStockPool, AmountStockPool, BidAskStockPool, FavorStockPool
+from radar.best_targets import BestTargetStockRadar
 from radar.everyday_targets import EverydayTargetStockRadar
 from strategy.fib import FibonacciTradingSignal
 from trader.base import OrderMessage
@@ -113,7 +114,8 @@ if __name__ == "__main__":
     # print(df[50:])
     
     # task_for_del_all_from_group()
-    EverydayTargetStockRadar(name="每日情绪榜",topN=300).startup()
+    # EverydayTargetStockRadar(name="每日情绪榜",topN=300).startup()
+    BestTargetStockRadar(name="封神榜",k=300,n=20).startup()
     
     # stockPool = ATPStockPool(k=300)
     # df = stockPool.get_topN()
@@ -122,6 +124,25 @@ if __name__ == "__main__":
     
     # symbols = stockPool.get_symbols()    
     # print(symbols)
+    
+    # df =adc.get_large_buy()
+    # df =df[df['volume']>3000000]
+    # print(df.head(50))
+    
+    # df =ATPStockPool(k=300).get_topN()    
+    # print(df)
+    
+    # df =BidAskStockPool(k=300,n=30).get_stat_data_df()
+    # print(df)
+    # df =BidAskStockPool(k=300,n=30).get_symbols()
+    # print(df)
+    
+    
+
+
+
+    
+
     
 
 
