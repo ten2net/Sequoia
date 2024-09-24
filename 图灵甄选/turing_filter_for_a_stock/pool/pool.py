@@ -219,3 +219,55 @@ class HotSymbolStockPool(StockPool):
       return symbols   
     else :
       return []  
+    
+class BidAskStockPool(StockPool):
+  def __init__(self,k:int=100,n:int=30):
+    self.adc = AkshareDataCollector()
+    self.k = k
+    self.n = n
+  def get_stat_data_df(self)->pd.DataFrame:
+    """   
+    Returns:
+        list: 包含股票符号的列表。
+    
+    """
+    df =ATPStockPool(k=self.k).get_topN()    
+    stat_data =[]
+    for ind,row in df.iterrows():
+      symbol=row["code"]
+      name = row["name"]
+      pct = row["pct"]
+      turnover = row["turnover"]
+      speed5 = row["5_minute_change"]
+      amount = round(row["amount"] /(10000 * 10000),2)
+      stock_intraday_em_dict = self.adc.get_stock_intraday_em(symbol=symbol)
+      stat_dict={
+        "rank": ind,
+        "name": name,
+        **stock_intraday_em_dict,
+        "speed5":speed5,
+        "turnover":turnover,
+        "amount":amount,
+        "pct": pct
+      }
+      stat_data.append(stat_dict)      
+    stat_data_df = pd.DataFrame(stat_data) 
+    stat_data_df= stat_data_df.query('`buy` > 0')
+    stat_data_df=stat_data_df.copy()
+    stat_data_df.sort_values(by="rank", ascending=True, inplace=True)    
+    return stat_data_df.head(self.n)
+
+  def get_symbols(self)->List[str]:
+    """
+    获取买盘数量大于0的股票列表
+    
+    Returns:
+        list: 包含股票符号的列表。
+    
+    """
+    stat_data_df = self.get_stat_data_df()
+    if not stat_data_df.empty :
+      symbols = stat_data_df['code'].tolist()
+      return symbols   
+    else :
+      return []  

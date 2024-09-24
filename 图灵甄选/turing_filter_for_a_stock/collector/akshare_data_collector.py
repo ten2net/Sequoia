@@ -69,7 +69,7 @@ class AkshareDataCollector(DataCollector):
             ~(df['name'].apply(str).str.startswith('N')) & 
             ~(df['name'].apply(str).str.startswith('C'))       
             ]
-        return df[(df['price'] < 100) & (df['pct'].abs() > 4)]
+        return df
     def get_jingjia_rise_event(self)->pd.DataFrame:
         """
         获取特定事件（如快速反弹）的股票变动数据。        
@@ -88,7 +88,7 @@ class AkshareDataCollector(DataCollector):
             ]
         df[['volume','price','diff']] =df['info'].astype(str).str.split(",",expand=True).astype(float)
         df['diff']=df['diff'].astype(float).abs()
-        df = df.query('diff > 0.02 and price > 3 ')  
+        # df = df.query('diff > 0.02 and price > 3 ')  
         # df.drop(columns=['volume'], inplace=True)
         return df
     def get_rapit_rise_event(self)->pd.DataFrame:
@@ -130,6 +130,30 @@ class AkshareDataCollector(DataCollector):
             ]
         df[['volume','price','diff']] =df['info'].astype(str).str.split(",",expand=True).astype(float)
         df = df.query('diff > 0.03 and (volume / 500000) > 1 and price > 3 ') 
+        # df.drop(columns=['volume'], inplace=True)      
+        return df
+    def get_large_buy(self)->pd.DataFrame:
+        """
+        获取特定事件（如大笔买入）的股票变动数据。
+        Returns:
+            pd.DataFrame: 返回一个pandas DataFrame对象，包含了指定事件的股票变动数据。
+        """
+        df = self.__fetch_stock_changes_em__(symbol="大笔买入") 
+        df=df[["时间","代码","名称","相关信息"]]
+        df.rename(columns={"时间":"time","代码":"code","名称":"name","相关信息":"info"},inplace=True)
+        df =df[~(df['code'].apply(str).str.startswith('8')) & 
+            ~(df['code'].apply(str).str.startswith('4')) &
+            ~(df['name'].apply(str).str.startswith('ST')) & 
+            ~(df['name'].apply(str).str.startswith('*'))  & 
+            ~(df['name'].apply(str).str.startswith('N')) & 
+            ~(df['name'].apply(str).str.startswith('C'))       
+            ]
+        df[['volume','price','diff']] =df['info'].astype(str).str.split(",",expand=True).astype(float)
+        
+        # df = df.query('diff > 0.03 and (volume / 500000) > 1 and price > 3 ') 
+        time_to_compare = pd.to_datetime("09:33:00").time()
+        df = df.query('time < @time_to_compare')
+        df = df.sort_values(by="volume",ascending=False)  
         # df.drop(columns=['volume'], inplace=True)      
         return df
     def get_data(self, symbol: str, start_date: str = None, end_date: str = None, adjust: str = "") -> pd.DataFrame:
@@ -321,5 +345,17 @@ class AkshareDataCollector(DataCollector):
         df = df[["代码","名称","涨跌幅","换手率","昨收","今开","最高","最低","最新价","成交量","成交额","score"]]
         df.columns = ['code','name','pct','turnover','close_yestday', 'open', 'high', 'low', 'close', 'volume', 'amount','score']
         return df
+    def get_stock_intraday_em(self,symbol:str):
+        df =  ak.stock_intraday_em(symbol=symbol)
+        df=df.query('`时间` >= "09:25:00" and `时间` <= "09:30:00"')
+        stat =df.groupby("买卖盘性质")['手数'].sum()
+        stat_dict={
+            "code": symbol,
+            "buy": stat.get('买盘', 0),
+            "sell": stat.get('卖盘', 0),
+            "other": stat.get('中性盘', 0),
+            "total": stat.get('买盘', 0) + stat.get('卖盘', 0) +stat.get('中性盘', 0)  
+        }
+        return stat_dict     
     
 
