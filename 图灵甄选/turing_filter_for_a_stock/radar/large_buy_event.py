@@ -58,12 +58,7 @@ class LargeBuyStockRadar(StockRadar):
             HighVolumeFilter(threshold=1.3), # 昨日成交量过滤器，过滤掉成交量大于5日均量1.3倍的股票
         ]
         filter_chain = FilterChain(filters)
-        df = filter_chain.apply(df)
-        
-        # df['amount_rank'] = df['amount'].rank(method='min')
-        # df['turnoverrank'] = df['turnover'].rank(method='min')
-        # df['pct_rank'] = df['pct'].rank(method='min')
-                
+        df = filter_chain.apply(df)                       
         
         df['upper_rate'] = df['code'].apply(lambda x: 20 if (
             x.startswith('3') or x.startswith('68')) else 10)
@@ -198,7 +193,7 @@ class LargeBuyStockRadar(StockRadar):
             #     print(f'东方财富接口调用异常:{e}')            
             # 11、发送消息通知  
             now = datetime.now()
-            if now.hour == 9 and now.minute<= 35:  # 只在开盘5分钟内发送此类消息 
+            if now.hour == 9 and now.minute<= 40:  # 只在开盘5分钟内发送此类消息 
                 df = df.head(self.topN)   
                 df['name'] =  df.apply(lambda row: "☀"+ row['name'] if row['is_hot_industry'] else row['name'], axis=1)     
                 wecom_msg_enabled= os.environ.get('WECOM_MSG_ENABLED').lower() == 'true'
