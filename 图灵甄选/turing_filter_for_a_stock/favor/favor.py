@@ -178,17 +178,17 @@ class FavorForEM(Favor):
             if not group_id:
                 raise Exception(f"could not find group:{group_name}")
         codes = self.__list_entities__(group_name)
-        codeList = [self.to_eastmoney_code(code, entity_type=entity_type) for code in codes]
-        codeList = ",".join(codeList)
-        
-        params: dict = {
-            "g":group_id,
-            "scs":codeList
-        }
-        url = self.__build_url__(action="dslot",params=params)
-        resp = requests.get(url, headers=self.HEADER)
-
-        return self.__parse_resp__(resp)
+        split_codes = [codes[i:i + 45] for i in range(0, len(codes), 45)]
+        for batch in split_codes: 
+            codeList = [self.to_eastmoney_code(code, entity_type=entity_type) for code in batch]
+            codeList = ",".join(codeList)
+            
+            params: dict = {
+                "g":group_id,
+                "scs":codeList
+            }
+            url = self.__build_url__(action="dslot",params=params)
+            resp = requests.get(url, headers=self.HEADER)
 
     def add_to_group(self, 
             code, entity_type="stock", group_name=None, group_id=None
@@ -214,24 +214,26 @@ class FavorForEM(Favor):
     def __update_favor_list__(self, symbol_list:list[str],group_full_name:str ,group_new_name:str,daily=False):
         # 添加到东方财富自选股
         # group_new_name中只包含最新的出票
-        group_id_new = self.get_group_id(group_new_name)
-        if not group_id_new: 
-            self.create_group(group_new_name)
-        else:
-            # 删除上一榜出票
-            self.del_all_from_group( group_name=group_new_name, entity_type="stock")  
+        if not daily:
+            group_id_new = self.get_group_id(group_new_name)
+            if not group_id_new: 
+                self.create_group(group_new_name)
+            else:
+                # 删除上一榜出票
+                self.del_all_from_group( group_name=group_new_name, entity_type="stock")  
         # group_full_name中包含全部的出票
         group_id_full = self.get_group_id(group_full_name)
         if not group_id_full:          
             self.create_group(group_full_name) 
         else:
-            now = datetime.now()
-            if now.hour< 9 or (now.hour== 9 and now.minute < 26):   # 删除前一天的出票
-                self.del_all_from_group( group_name=group_full_name, entity_type="stock")  
+            pass
+            # now = datetime.now()
+            # if now.hour< 9 or (now.hour== 9 and now.minute < 26):   # 删除前一天的出票
+            #     self.del_all_from_group( group_name=group_full_name, entity_type="stock")  
            
         # 添加自选 
-        # group_name_list =[group_full_name] if daily else [group_new_name,group_full_name] 
-        group_name_list =[group_new_name,group_full_name] 
+        group_name_list =[group_full_name] if daily else [group_new_name,group_full_name] 
+        # group_name_list =[group_new_name,group_full_name] 
         for group_name in group_name_list:       
             self.add_symbols_to_group(symbol_list, group_name=group_name, entity_type="stock")
             
