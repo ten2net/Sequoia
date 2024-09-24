@@ -1,6 +1,8 @@
 # from radar.cci_88 import CCIStockRadar
 from radar.everyday_targets import EverydayTargetStockRadar
 from radar.hot_symbols import HotSymbolStockRadar
+from radar.best_targets import BestTargetStockRadar
+
 # from radar.jingjia_rise_event import JingJiaRiseStockRadar
 from radar.large_buy_event import LargeBuyStockRadar
 from radar.sample.cci_88 import CCIStockRadar
@@ -19,9 +21,10 @@ all_radares = [
     JingJiaRiseStockRadar(name="竞价上涨", topN =22),
 ]
 stock_radares = [
-    LargeBuyStockRadar(name="大笔买入", topN =22),
-    HotSymbolStockRadar(name="热股强势", topN =22),
-    EverydayTargetStockRadar(name="每日情绪榜",topN=100)
+    # LargeBuyStockRadar(name="大笔买入", topN =22),
+    # HotSymbolStockRadar(name="热股强势", topN =22),
+    EverydayTargetStockRadar(name="每日情绪榜",topN=100),
+    BestTargetStockRadar(name="封神榜",k=300,n=20)
 ]
 jinjia_stock_radares = [
     HotSymbolStockRadar(name="热股强势", topN =22),

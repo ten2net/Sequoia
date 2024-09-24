@@ -70,7 +70,7 @@ def task_for_del_all_from_group():
     """ 
     now = datetime.now()  
     # if not is_trading_time(now):return    
-    groups= ["大笔买全榜","每日情全榜","热股强全榜","买信号全榜","卖信号全榜"]
+    groups= ["封神榜全榜","大笔买全榜","每日情全榜","热股强全榜","买信号全榜","卖信号全榜"]
     um = UserManagement()
     for user in um.users:
         for group_name in groups:
@@ -107,6 +107,7 @@ def main():
 
     if args.dev:
         start_jingjia_rice_radar()
+        # start_financial_radar_system()
     else:
         pbar_list = []
         task_cron_config=[
