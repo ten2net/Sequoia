@@ -249,10 +249,10 @@ class Trader:
             raise ValueError("仓位比例必须在-1和1之间")
         
         balance_info = self.get_balance_info()  # {'account': '241990400000029517', 'total_money': '999160.83', 'account_pct': '-0.30', 'account_return': '-839.17', 'market_value': '348792.72', 'can_use_money': '650368.12', 'freeze_money': '74128.72'}
-        if 0 < position_ratio < 0.3 and (float(balance_info['market_value']) /float(balance_info['total_money'])) > 0.7:
-            return {"msg": "已经超过7成，风控模块拒绝买入"}
-        if -0.1 < position_ratio < 0 and (float(balance_info['market_value']) /float(balance_info['total_money'])) > 0.5:
-            return {"msg": "情绪太差, 仓位已经超过一半，风控模块拒绝买入"}
+        # if 0 < position_ratio < 0.3 and (float(balance_info['market_value']) /float(balance_info['total_money'])) > 0.8:
+        #     return {"msg": "已经超过7成，风控模块拒绝买入"}
+        # if -0.1 < position_ratio < 0 and (float(balance_info['market_value']) /float(balance_info['total_money'])) > 0.5:
+        #     return {"msg": "情绪太差, 仓位已经超过一半，风控模块拒绝买入"}
         # 计算单次买入金额
         buy_amount_per_stock = float(balance_info['can_use_money']) * position_ratio // len(stock_prices.items())
         
