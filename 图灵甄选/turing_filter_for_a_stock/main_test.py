@@ -113,9 +113,9 @@ if __name__ == "__main__":
     # print(df[:50])
     # print(df[50:])
     
-    # task_for_del_all_from_group()
+    task_for_del_all_from_group()
     # EverydayTargetStockRadar(name="每日情绪榜",topN=300).startup()
-    BestTargetStockRadar(name="封神榜",k=300,n=20).startup()
+    # BestTargetStockRadar(name="封神榜",k=300,n=30).startup()
     
     # stockPool = ATPStockPool(k=300)
     # df = stockPool.get_topN()
@@ -136,6 +136,10 @@ if __name__ == "__main__":
     # print(df)
     # df =BidAskStockPool(k=300,n=30).get_symbols()
     # print(df)
+    # start_date ="2024-09-23"
+    # end_date ="2024-09-24"
+    # data = adc.get_stock_zh_a_hist(start_date,end_date,adjust="hfq")
+    # print(data)
     
     
 

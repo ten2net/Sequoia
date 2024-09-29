@@ -74,7 +74,7 @@ def get_stock_data(stock_code,daily=False):
             dt = datetime.now() - timedelta(days=delta)
         today=dt.strftime("%Y-%m-%d")
             
-        stock_df =  ak.stock_zh_a_hist_min_em(symbol=stock_code, period="1",  start_date=f"{today} 09:25:00", adjust="")
+        stock_df =  ak.stock_zh_a_hist_min_em(symbol=stock_code, period="1",  start_date=f"{today} 09:30:00", adjust="")
         #stock_df =  ak.stock_zh_a_hist_pre_min_em(symbol=stock_code, start_time="09:25:00")
         # print(stock_df.columns)
         stock_df.rename(

@@ -233,6 +233,75 @@ class AkshareDataCollector(DataCollector):
         df['upper_limit'] = df.apply(lambda row: self.__get_limit_price__(row)[0] ,axis=1 )
         df['lower_limit'] = df.apply(lambda row: self.__get_limit_price__(row)[1] ,axis=1 )
         return df
+    def get_stock_zh_a_hist(self, start_date,end_date,adjust="hfq"):
+        df = ak.stock_zh_a_spot_em()
+        df.drop(columns=['序号'], inplace=True)
+        df.drop(columns=['涨跌额'], inplace=True)
+        df.drop(columns=['涨速'], inplace=True)
+        df.columns = list(Constants.SPOT_EM_COLUMNS)
+        df =df[~(df['code'].apply(str).str.startswith('8')) & 
+            ~(df['code'].apply(str).str.startswith('4')) &
+            ~(df['code'].apply(str).str.startswith('9')) &
+            ~(df['code'].apply(str).str.startswith('68')) &
+            ~(df['name'].apply(str).str.startswith('ST')) & 
+            ~(df['name'].apply(str).str.startswith('*'))  & 
+            ~(df['name'].apply(str).str.startswith('N')) & 
+            ~(df['name'].apply(str).str.startswith('C'))       
+            ]
+        df=df[df["60_day_pct"]>10]
+        df=df.head(100)
+        print("------------",len(df))
+        date_range = pd.date_range(start=start_date, end=end_date)
+        return_value ={}
+        for single_date in date_range:
+            all_data=[]
+            current_date = single_date.strftime("%Y-%m-%d")
+            last_date = single_date - timedelta(days=1)
+            last_date = last_date.strftime("%Y%m%d")
+            for ind,row in df.iterrows():
+                stock_zh_a_hist_df = ak.stock_zh_a_hist(symbol=row['code'], period="daily", end_date=last_date, adjust="")
+                last_day_close = stock_zh_a_hist_df['收盘'].iloc[-1]
+                #   stock_zh_a_hist_df = ak.stock_zh_a_hist(symbol=row['code'], period="daily", start_date=start_date, end_date=end_date, adjust=adjust)
+                stock_df =  ak.stock_zh_a_hist_min_em(symbol=row['code'], period="1", start_date=f"{current_date} 09:25:00",end_date=f"{current_date} 09:30:00", adjust="")
+                if stock_df.empty:
+                    continue
+                data={
+                    "time": stock_df['时间'].iloc[-1],
+                    "code": row['code'],
+                    "name": row['name'],
+                    "total_capital": row['total_capital'],
+                    "circulating_capital": row['circulating_capital'],
+                    "open": stock_df['开盘'].iloc[0],
+                    "high": stock_df['最高'].max(),
+                    "low": stock_df['最低'].min(),
+                    "close": stock_df['收盘'].iloc[-1],
+                    "volume": stock_df['成交量'].sum(),
+                    "amount": stock_df['成交额'].sum()
+                }
+                data['pct'] = 100 * (data['close'] - last_day_close)/last_day_close
+                data['turnover'] = 100 * data['volume'] / data['circulating_capital']
+                all_data.append(data)
+            if len(all_data)>0:
+                k =len(all_data)
+                stock_df =pd.DataFrame(all_data) 
+                stock_df['amount_rank'] = stock_df['amount'].rank(method='dense',ascending=False)
+                stock_df['turnover_rank'] = stock_df['turnover'].rank(method='dense',ascending=False)
+                stock_df['pct_rank'] = stock_df['pct'].rank(method='dense',ascending=False) 
+                stock_df = stock_df[
+                    (stock_df['amount_rank'] <= k) &
+                    (stock_df['turnover_rank'] <= k) &
+                    (stock_df['pct_rank'] <= k)
+                ]  
+                # 定义权重
+                w1 = 1.3  # amount_rank 的权重
+                w2 = 1.2  # turnover_rank 的权重
+                w3 = 0.5  # pct_rank 的权重
+                stock_df['score'] = 3 * k - (w1 * stock_df['amount_rank'] + w2 * stock_df['turnover_rank'] + w3 * stock_df['pct_rank'])                
+                stock_df = stock_df.sort_values(by="score",ascending=False)        
+                stock_df.reset_index(drop=True)                
+                stock_df=stock_df.head(20)                
+                return_value[current_date] = stock_df
+        return return_value
     def get_fund_etf_spot_em(self):
         df = ak.fund_etf_spot_em()
         df=df[['代码', '名称', '最新价',  '涨跌幅', '成交量', '成交额',
@@ -347,12 +416,17 @@ class AkshareDataCollector(DataCollector):
         return df
     def get_stock_intraday_em(self,symbol:str):
         df =  ak.stock_intraday_em(symbol=symbol)
-        df=df.query('`时间` >= "09:25:00" and `时间` <= "09:30:00"')
+        current_time_str = datetime.now().time().strftime('%H:%M:00')
+        df=df.query(f'`时间` >= "09:25:00" and `时间` <= "{current_time_str}"')
         stat =df.groupby("买卖盘性质")['手数'].sum()
         stat_dict={
             "code": symbol,
             "buy": stat.get('买盘', 0),
             "sell": stat.get('卖盘', 0),
+            "buy_gt_sell": 1 if stat.get('买盘', 0) > 1.618 * stat.get('卖盘', 0) else 0,
+            "buy_div_sell": round(stat.get('买盘', 0) / stat.get('卖盘', 0.00001),2),
+            "buy_std_sell": round(abs(stat.get('买盘', 0) - stat.get('卖盘', 0.0)) / (stat.get('买盘', 0) + stat.get('卖盘', 0.0)),1),
+            "buy_plus_sell": stat.get('买盘', 0) + stat.get('卖盘', 0),
             "other": stat.get('中性盘', 0),
             "total": stat.get('买盘', 0) + stat.get('卖盘', 0) +stat.get('中性盘', 0)  
         }

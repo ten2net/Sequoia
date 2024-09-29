@@ -226,7 +226,8 @@ class FavorForEM(Favor):
         if not group_id_full:          
             self.create_group(group_full_name) 
         else:
-            pass
+            self.del_all_from_group( group_name=group_full_name, entity_type="stock")  
+            # pass
             # now = datetime.now()
             # if now.hour< 9 or (now.hour== 9 and now.minute < 26):   # 删除前一天的出票
             #     self.del_all_from_group( group_name=group_full_name, entity_type="stock")  

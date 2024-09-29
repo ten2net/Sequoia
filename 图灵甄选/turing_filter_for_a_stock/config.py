@@ -24,7 +24,7 @@ stock_radares = [
     # LargeBuyStockRadar(name="大笔买入", topN =22),
     # HotSymbolStockRadar(name="热股强势", topN =22),
     EverydayTargetStockRadar(name="每日情绪榜",topN=100),
-    BestTargetStockRadar(name="封神榜",k=300,n=20)
+    BestTargetStockRadar(name="封神榜",k=300,n=40)
 ]
 jinjia_stock_radares = [
     HotSymbolStockRadar(name="热股强势", topN =22),

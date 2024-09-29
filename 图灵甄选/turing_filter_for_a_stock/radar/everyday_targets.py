@@ -34,16 +34,19 @@ class EverydayTargetStockRadar(StockRadar):
         # 2、准备主股票池和其他附加股票池
         mainStockPool = HotRankStockPool()
         atpStockPool = ATPStockPool(k=self.topN)      
-        stockPools = [mainStockPool,atpStockPool]     
+        # stockPools = [mainStockPool,atpStockPool]     
+        stockPools = [atpStockPool]     
         symbols = []
         for stockPool in stockPools:
             symbols += stockPool.get_symbols()
         # 3、先对symbols进行基本面过滤,以便减少后续计算量
         symbols_spot_df = market_spot_df[market_spot_df['code'].isin(symbols)]
+        # 使用 reindex 方法重新排序 symbols_spot_df
+        symbols_spot_df = symbols_spot_df.set_index('code').reindex(symbols).reset_index()         
         print("symbols_spot_df=",  len(symbols_spot_df))
         fand_filter_list = [SymbolFilter(),
                             NameFilter(),
-                            TotalCapitalFilter(min_threshold=15, max_threshold=1500),  # 总市值过滤
+                            TotalCapitalFilter(min_threshold=20, max_threshold=1500),  # 总市值过滤
                             ]
         fand_filter_chain = FilterChain(fand_filter_list)
         symbols_spot_df = fand_filter_chain.apply(symbols_spot_df)
@@ -58,7 +61,7 @@ class EverydayTargetStockRadar(StockRadar):
         df = df.merge(market_spot_df, on="code", how="left")
         # 6、筛选股票，实现单独的过滤器，添加到过滤器链中即可
         filters = [
-            AmountFilter(threshold=1.2),  # 昨日成交额过滤器，过滤掉成交额太小的股票
+            AmountFilter(threshold=0.5),  # 昨日成交额过滤器，过滤掉成交额太小的股票
             HighVolumeFilter(threshold=2), # 昨日成交量过滤器，过滤掉成交量大于5日均量2倍的股票
         ]
         filter_chain = FilterChain(filters)

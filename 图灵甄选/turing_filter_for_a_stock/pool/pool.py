@@ -56,6 +56,7 @@ class ATPStockPool(StockPool):
     
     """
     df = self.get_topN()
+    print(df)
     symbols = df['code'].tolist()
     return symbols  
   def get_topN(self) -> pd.DataFrame:
@@ -67,20 +68,23 @@ class ATPStockPool(StockPool):
     
     """
     k= self.k
-    stock_df = self.adc.get_stock_zh_a_spot_em()    
-    stock_df['amount_rank'] = stock_df['amount'].rank(method='dense',ascending=False)
-    stock_df['turnover_rank'] = stock_df['turnover'].rank(method='dense',ascending=False)
-    stock_df['pct_rank'] = stock_df['pct'].rank(method='dense',ascending=False) 
+    stock_df = self.adc.get_stock_zh_a_spot_em() 
+    total_stocks = len(stock_df)
+    stock_df['amount_rank'] = (total_stocks - stock_df['amount'].rank(method='dense',ascending=False))/total_stocks
+    stock_df['turnover_rank'] = (total_stocks - stock_df['turnover'].rank(method='dense',ascending=False))/total_stocks
+    stock_df['pct_rank'] = (total_stocks - stock_df['pct'].rank(method='dense',ascending=False))/total_stocks 
+    kk = (total_stocks - k) / total_stocks
     stock_df = stock_df[
-        (stock_df['amount_rank'] <= k) &
-        (stock_df['turnover_rank'] <= k) &
-        (stock_df['pct_rank'] <= k)
+        (stock_df['amount_rank'] >= kk) &
+        (stock_df['turnover_rank'] >= kk) &
+        (stock_df['pct_rank'] >= kk)
     ]  
     # 定义权重
-    w1 = 1.3  # amount_rank 的权重
-    w2 = 1.2  # turnover_rank 的权重
-    w3 = 0.5  # pct_rank 的权重
-    stock_df['score'] = 3 * k - (w1 * stock_df['amount_rank'] + w2 * stock_df['turnover_rank'] + w3 * stock_df['pct_rank'])
+    w1 = 0.4  # amount_rank 的权重
+    w2 = 0.4  # turnover_rank 的权重
+    w3 = 0.2  # pct_rank 的权重
+    # stock_df['score'] = 3 * k - (w1 * stock_df['amount_rank'] + w2 * stock_df['turnover_rank'] + w3 * stock_df['pct_rank'])
+    stock_df['score'] = (w1 * stock_df['amount_rank'] + w2 * stock_df['turnover_rank'] + w3 * stock_df['pct_rank'])
     # print(stock_df.columns)
     stock_df = stock_df.sort_values(by="score",ascending=False)        
     stock_df.reset_index(drop=True)                
@@ -252,9 +256,14 @@ class BidAskStockPool(StockPool):
       }
       stat_data.append(stat_dict)      
     stat_data_df = pd.DataFrame(stat_data) 
-    stat_data_df= stat_data_df.query('`buy` > 0')
+    # stat_data_df= stat_data_df.query('`buy` < `sell`')
     stat_data_df=stat_data_df.copy()
-    stat_data_df.sort_values(by="rank", ascending=True, inplace=True)    
+    # stat_data_df.sort_values(by="rank", ascending=True, inplace=True) 
+    stat_data_df.sort_values(by="buy_div_sell", ascending=False, inplace=True) 
+    # stat_data_df.sort_values(by=["buy_gt_sell","total"], ascending=[True,False], inplace=True) 
+    # stat_data_df.sort_values(by=["buy_std_sell","total"], ascending=[False,False], inplace=True) 
+    stat_data_df.reset_index(drop=True) 
+    print(stat_data_df[["rank","code","name", "pct","buy_std_sell","buy_gt_sell","buy_plus_sell","buy_div_sell","buy","sell","speed5","turnover","amount"]])   
     return stat_data_df.head(self.n)
 
   def get_symbols(self)->List[str]:

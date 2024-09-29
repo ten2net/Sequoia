@@ -17,7 +17,7 @@ from pubsub import pub
 from trader.base import OrderMessage
 
 class BestTargetStockRadar(StockRadar):
-    def __init__(self, name: str = "封神榜", k:int=100, n: int = 10):
+    def __init__(self, name: str = "封神榜", k:int=300, n: int = 30):
         self.name = name
         self.k = k 
         self.n = n 
@@ -40,27 +40,30 @@ class BestTargetStockRadar(StockRadar):
             symbols += stockPool.get_symbols()
         # 3、先对symbols进行基本面过滤,以便减少后续计算量
         symbols_spot_df = market_spot_df[market_spot_df['code'].isin(symbols)]
-        # fand_filter_list = [SymbolFilter(),
-        #                     NameFilter(),
-        #                     TotalCapitalFilter(min_threshold=15, max_threshold=1500),  # 总市值过滤
-        #                     ]
-        # fand_filter_chain = FilterChain(fand_filter_list)
-        # symbols_spot_df = fand_filter_chain.apply(symbols_spot_df)
+        # 使用 reindex 方法重新排序 symbols_spot_df
+        symbols_spot_df = symbols_spot_df.set_index('code').reindex(symbols).reset_index()        
+        fand_filter_list = [SymbolFilter(),
+                            NameFilter(),
+                            TotalCapitalFilter(min_threshold=20, max_threshold=1500),  # 总市值过滤
+                            ]
+        fand_filter_chain = FilterChain(fand_filter_list)
+        symbols_spot_df = fand_filter_chain.apply(symbols_spot_df)
         symbols = symbols_spot_df['code'].tolist()
         # 4、获取股票数据，并附加其他指标
         # df = mainStockPool.get_data_with_indictores(symbols,withCDL=False)
+
         df = mainStockPool.get_data(symbols)
         if df.shape[0] == 0:
             print(colored("未到集合竞价时间！", 'red'))
             return
         df = df.merge(market_spot_df, on="code", how="left")
         # 6、筛选股票，实现单独的过滤器，添加到过滤器链中即可
-        # filters = [
-        #     AmountFilter(threshold=1.2),  # 昨日成交额过滤器，过滤掉成交额太小的股票
-        #     HighVolumeFilter(threshold=2), # 昨日成交量过滤器，过滤掉成交量大于5日均量2倍的股票
-        # ]
-        # filter_chain = FilterChain(filters)
-        # df = filter_chain.apply(df)
+        filters = [
+            AmountFilter(threshold=0.5),  # 昨日成交额过滤器，过滤掉成交额太小的股票
+            HighVolumeFilter(threshold=1.5), # 昨日成交量过滤器，过滤掉成交量大于5日均量2倍的股票
+        ]
+        filter_chain = FilterChain(filters)
+        df = filter_chain.apply(df)
         # print("filters=",  len(df))
         # 9、自选股
         now = datetime.now()
@@ -70,7 +73,7 @@ class BestTargetStockRadar(StockRadar):
         if not os.path.exists(directory):
             os.makedirs(directory)   
         # print(df.columns) 
-        df["date"] = now.strftime("%Y-%m-%d %H:%M:%S")   
+        df["date"] = now.strftime("%Y-%m-%d %H:%M:00")   
         df = df[['date', 'code', 'name', 'open', 'close', 'high', 'low', 'volume', 'amount', 'amp',
        'pct', 'turnover', 'close_yestday', 'upper_limit_x', 'lower_limit_x',
        'pct_yestday', 'volume_yestday', 'amount_yestday', 'turnover_yestday',

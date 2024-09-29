@@ -239,6 +239,7 @@ def process_stock_data(stock,dt_bt):
             high_now = stock_tick_df['high'].max()
             low_now = stock_tick_df['low'].min()  
             dt = stock_tick_df.iloc[-1]['time'] if args.daily else datetime.strptime(stock_tick_df.iloc[-1]['time'], "%Y-%m-%d %H:%M:%S") 
+            print(dt_bt ,str(dt))
             if dt_bt != str(dt)  :continue
             # if dt.hour == 9 or (dt.hour == 10 and dt.minute <= 30) :
             if not args.daily:    
@@ -465,7 +466,8 @@ def job():
       } 
       directory = 'results/bests'
       files = sorted([f for f in os.listdir(directory) if f.endswith('.csv')]) 
-      for filename in files:
+      for filename in files[2:]:
+        print(filename)
         file_path = os.path.join(directory, filename)
 
         df = pd.read_csv(file_path, dtype=data_type)
